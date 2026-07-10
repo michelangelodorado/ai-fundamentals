@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Infrastructure — Interactive Explainer</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2431;--border:#2d3644;--text:#e6edf3;--muted:#9aa7b5;--accent:#58a6ff;--accent-2:#79c0ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--pink:#ff7b9c;--yellow:#f2cc60;--red:#f85149;--radius:14px;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%,#16202e 0%,var(--bg) 55%) fixed;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 120px;}
+  .backlink{display:inline-block;margin:26px 0 0;color:var(--accent-2);text-decoration:none;font-size:14px;}
+  .backlink:hover{text-decoration:underline;}
+  header.hero{text-align:center;padding:30px 20px 40px;}
+  header.hero .kicker{text-transform:uppercase;letter-spacing:3px;font-size:12px;color:var(--accent);font-weight:700;}
+  header.hero h1{font-size:clamp(32px,6vw,52px);margin:12px 0 10px;background:linear-gradient(90deg,#79c0ff,#bc8cff,#ff7b9c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+  header.hero p{color:var(--muted);font-size:18px;max-width:640px;margin:0 auto;}
+  .goal-badge{display:inline-block;margin-top:22px;background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.35);color:var(--accent-2);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;}
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--purple));z-index:100;transition:width .1s linear;}
+  nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:20px 0 50px;}
+  nav.toc h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:30px;}
+  nav.toc li{margin:5px 0;} nav.toc a{color:var(--accent-2);text-decoration:none;} nav.toc a:hover{text-decoration:underline;}
+  section.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:26px 0;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+  section.card.visible{opacity:1;transform:none;}
+  section.card h2{margin:0 0 6px;font-size:26px;display:flex;align-items:center;gap:12px;}
+  section.card h2 .num{font-size:14px;font-weight:700;background:var(--panel-2);border:1px solid var(--border);color:var(--accent);min-width:34px;height:34px;padding:0 8px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .lead{color:var(--muted);margin:0 0 18px;}
+  p{margin:12px 0;} strong{color:#fff;}
+  .hl{color:var(--accent-2);font-weight:600;} .tag{color:var(--purple);font-weight:600;}
+  .demo{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:20px 0;}
+  .demo .label{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .demo .label::before{content:"▶";color:var(--green);font-size:10px;}
+  button,.btn{background:var(--accent);color:#06131f;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;transition:transform .1s,filter .15s;}
+  button:hover{filter:brightness(1.1);} button:active{transform:scale(.96);}
+  button.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
+  input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  canvas{display:block;width:100%;border-radius:10px;}
+  .val{font-family:ui-monospace,monospace;background:#0d1117;border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--yellow);}
+  .note{border-left:3px solid var(--accent);background:rgba(88,166,255,0.07);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:15px;}
+  .note.f5{border-left-color:var(--pink);background:rgba(255,123,156,0.07);}
+  .note b{color:var(--accent-2);} .note.f5 b{color:var(--pink);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);} th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;} td strong{color:var(--accent-2);}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .seg button{background:transparent;color:var(--muted);border:none;border-radius:0;padding:8px 14px;}
+  .seg button.on{background:var(--accent);color:#06131f;}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;}
+  @media (max-width:600px){nav.toc ol{columns:1;}section.card{padding:22px;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+  <a href="index.html" class="backlink">← Back to all sections</a>
+  <header class="hero">
+    <div class="kicker">Section 4</div>
+    <h1>AI Infrastructure</h1>
+    <p>The GPUs, interconnects, and serving software that LLMs actually run on — and why VRAM is the number that decides everything.</p>
+    <div class="goal-badge">🎯 Goal: reason about GPU sizing, splitting & serving</div>
+  </header>
+
+  <nav class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><a href="#s1">CPU vs GPU</a></li>
+      <li><a href="#s2">CUDA & the NVIDIA Moat</a></li>
+      <li><a href="#s3">VRAM — the constraint</a></li>
+      <li><a href="#s4">Tensor vs Pipeline Parallelism</a></li>
+      <li><a href="#s5">NVLink vs PCIe (& NCCL)</a></li>
+      <li><a href="#s6">DPUs</a></li>
+      <li><a href="#s7">MIG & GPU Scheduling</a></li>
+      <li><a href="#s8">Inference Servers & Batching</a></li>
+      <li><a href="#s9">The Serving Software</a></li>
+      <li><a href="#s10">The Full Stack</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 CPU vs GPU -->
+  <section class="card" id="s1">
+    <h2><span class="num">1</span> CPU vs GPU</h2>
+    <p class="lead">Why AI runs on GPUs at all.</p>
+    <p>A <strong>CPU</strong> has a few very powerful cores built for sequential logic. A <strong>GPU</strong> has <span class="hl">thousands of simple cores</span> that do the same math on lots of data at once. LLMs are giant matrix multiplications — embarrassingly parallel — so GPUs crush them.</p>
+    <div class="demo">
+      <div class="label">Live: same 48-cell workload, two chips</div>
+      <canvas id="cpuGpuCanvas" height="220"></canvas>
+      <div class="controls"><button onclick="runCpuGpu()">Run the workload ⚡</button></div>
+      <div id="cpuGpuResult" style="margin-top:10px;font-size:14px;color:var(--muted);min-height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- 2 CUDA -->
+  <section class="card" id="s2">
+    <h2><span class="num">2</span> CUDA & the NVIDIA Moat</h2>
+    <p class="lead">Why NVIDIA is so hard to displace.</p>
+    <p><strong>CUDA</strong> is NVIDIA's platform for programming GPUs. Every major AI framework — PyTorch and the rest — is built on it. Even when a competitor's chip is fast, the entire ecosystem is written for CUDA, so switching is painful. That's <span class="hl">the moat</span>.</p>
+    <div class="demo">
+      <div class="label">The stack sits on CUDA</div>
+      <div style="text-align:center;font-family:ui-monospace,monospace;font-size:14px;line-height:2.2;">
+        <div style="background:rgba(88,166,255,.15);border:1px solid var(--accent);border-radius:8px;padding:6px;">Your AI app / framework (PyTorch)</div>
+        <div style="color:var(--muted)">▼ built on ▼</div>
+        <div style="background:rgba(63,185,80,.15);border:1px solid var(--green);border-radius:8px;padding:6px;">CUDA</div>
+        <div style="color:var(--muted)">▼ runs on ▼</div>
+        <div style="background:rgba(188,140,255,.15);border:1px solid var(--purple);border-radius:8px;padding:6px;">NVIDIA GPU silicon</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 VRAM -->
+  <section class="card" id="s3">
+    <h2><span class="num">3</span> VRAM — the Constraint <span style="font-size:13px;color:var(--pink);font-weight:700">★ the big one</span></h2>
+    <p class="lead">The single most important spec for inference.</p>
+    <p>The whole model's <strong>weights + the KV cache</strong> (Section 2) must fit in GPU memory. A 70B model at FP16 needs ≈140 GB — more than one 80 GB GPU. So you either <span class="hl">quantize</span> it smaller or <span class="hl">split</span> it across GPUs.</p>
+    <div class="demo">
+      <div class="label">Live: fit a 70B model into an 80 GB GPU</div>
+      <div class="controls" style="margin-top:0;">
+        <span style="font-size:14px;">Precision:</span>
+        <div class="seg" id="vramSeg">
+          <button class="on" onclick="setVram(2,this)">FP16</button>
+          <button onclick="setVram(1,this)">8-bit</button>
+          <button onclick="setVram(0.5,this)">4-bit</button>
+        </div>
+      </div>
+      <canvas id="vramCanvas" height="150" style="margin-top:16px;"></canvas>
+      <div id="vramStatus" style="margin-top:8px;font-size:14px;"></div>
+    </div>
+    <div class="note f5"><b>Your world:</b> "how many GPUs do I need?" is really "how much VRAM does the model + expected KV cache need?" — the first sizing question in any AI infra deal.</div>
+  </section>
+
+  <!-- 4 TP vs PP -->
+  <section class="card" id="s4">
+    <h2><span class="num">4</span> Tensor vs Pipeline Parallelism</h2>
+    <p class="lead">Two ways to split a model that won't fit on one GPU.</p>
+    <p><strong>Tensor parallelism</strong> slices <em>each layer</em> across GPUs — they combine results constantly, so they need fast links (best inside one server). <strong>Pipeline parallelism</strong> splits <em>by layers</em> like an assembly line — less chatty, so it works across servers.</p>
+    <div class="demo">
+      <div class="label">Live: toggle the split strategy</div>
+      <div class="controls" style="margin-top:0;">
+        <div class="seg" id="parSeg">
+          <button class="on" onclick="setPar('tp',this)">Tensor</button>
+          <button onclick="setPar('pp',this)">Pipeline</button>
+        </div>
+      </div>
+      <canvas id="parCanvas" height="200" style="margin-top:16px;"></canvas>
+      <div id="parDesc" style="margin-top:8px;font-size:14px;color:var(--muted);"></div>
+    </div>
+  </section>
+
+  <!-- 5 NVLink vs PCIe -->
+  <section class="card" id="s5">
+    <h2><span class="num">5</span> NVLink vs PCIe <span style="font-size:13px;color:var(--muted)">(and NCCL)</span></h2>
+    <p class="lead">How GPUs talk — and why it matters for splitting.</p>
+    <p><strong>NVLink</strong> is NVIDIA's ultra-fast direct link between GPUs inside a server. <strong>PCIe</strong> is the slower standard bus to the CPU. Tensor parallelism chats constantly, so it <span class="hl">needs NVLink</span>. <strong>NCCL</strong> is the software that moves the data efficiently over whichever link.</p>
+    <div class="demo">
+      <div class="label">Live: race a data transfer over each link</div>
+      <canvas id="linkCanvas" height="170"></canvas>
+      <div class="controls"><button onclick="raceLinks()">Send data between 2 GPUs →</button></div>
+    </div>
+  </section>
+
+  <!-- 6 DPU -->
+  <section class="card" id="s6">
+    <h2><span class="num">6</span> DPUs</h2>
+    <p class="lead">Offloading everything that isn't compute.</p>
+    <p>A <strong>DPU</strong> (Data Processing Unit, e.g. NVIDIA BlueField) is a smart NIC that takes <span class="hl">networking, storage, and security</span> off the CPU — so the CPU and GPUs can focus on the model. In AI datacenters, this is where traffic management, encryption, and security enforcement increasingly live.</p>
+    <div class="demo">
+      <div class="label">Live: move the work off the CPU</div>
+      <div class="controls" style="margin-top:0;"><button onclick="toggleDpu()" id="dpuBtn">Add a DPU →</button></div>
+      <canvas id="dpuCanvas" height="180" style="margin-top:14px;"></canvas>
+    </div>
+    <div class="note f5"><b>Squarely F5 territory:</b> DPUs are exactly where traffic management and security enforcement offload to in AI infrastructure — worth internalizing for your role.</div>
+  </section>
+
+  <!-- 7 MIG -->
+  <section class="card" id="s7">
+    <h2><span class="num">7</span> MIG & GPU Scheduling</h2>
+    <p class="lead">The opposite problem: when one GPU is too big for one small job.</p>
+    <p><strong>MIG</strong> (Multi-Instance GPU) partitions a single GPU into up to 7 <span class="hl">isolated</span> instances, so several small workloads share it safely instead of one job hogging it. <strong>Scheduling</strong> — usually via the <strong>Kubernetes GPU Operator</strong> — decides who gets which slice when. Utilization is money.</p>
+    <div class="demo">
+      <div class="label">Live: slice one GPU with MIG</div>
+      <input type="range" id="migSlider" min="1" max="7" value="1">
+      <div style="margin-top:6px;">Instances: <span class="val" id="migCount">1</span></div>
+      <canvas id="migCanvas" height="120" style="margin-top:12px;"></canvas>
+    </div>
+  </section>
+
+  <!-- 8 inference batching -->
+  <section class="card" id="s8">
+    <h2><span class="num">8</span> Inference Servers & Batching</h2>
+    <p class="lead">A model file doesn't serve traffic — an inference server does.</p>
+    <p>It loads the model onto GPUs and exposes an API, handling <span class="hl">batching</span> (combining concurrent requests so the GPU stays busy), KV-cache management, and streaming. Batching is the key throughput trick.</p>
+    <div class="demo">
+      <div class="label">Live: requests arrive, get batched, served together</div>
+      <canvas id="batchCanvas" height="180"></canvas>
+      <div class="controls"><button onclick="addReq()">Request arrives →</button><button class="ghost" onclick="serveBatch()">Serve the batch ⚡</button></div>
+    </div>
+  </section>
+
+  <!-- 9 software -->
+  <section class="card" id="s9">
+    <h2><span class="num">9</span> The Serving Software</h2>
+    <p class="lead">The tools you'll actually hear named.</p>
+    <table>
+      <tr><th>Tool</th><th>What it is</th><th>When you'll hear it</th></tr>
+      <tr><td><strong>Ollama</strong></td><td>Dead-simple local runner</td><td>Laptops, dev, POCs</td></tr>
+      <tr><td><strong>vLLM</strong></td><td>High-throughput server; PagedAttention KV cache</td><td>De-facto open-source standard</td></tr>
+      <tr><td><strong>SGLang</strong></td><td>Newer high-perf server; strong structured output</td><td>vLLM alternative</td></tr>
+      <tr><td><strong>TensorRT-LLM</strong></td><td>NVIDIA max-perf engine, compiled per-GPU</td><td>Squeezing peak NVIDIA speed</td></tr>
+      <tr><td><strong>NVIDIA NIM</strong></td><td>Prepackaged inference microservices (container)</td><td>Enterprise "easy button," K8s-ready</td></tr>
+      <tr><td><strong>OpenWebUI</strong></td><td>ChatGPT-style front-end UI (<em>not</em> a server)</td><td>The chat interface users see</td></tr>
+    </table>
+  </section>
+
+  <!-- 10 full stack -->
+  <section class="card" id="s10" style="background:linear-gradient(135deg,rgba(188,140,255,0.1),rgba(88,166,255,0.08));border:1px solid rgba(188,140,255,0.3);">
+    <h2><span class="num">🎯</span> The Full Stack</h2>
+    <p class="lead">Everything above, in one picture. Hover a layer.</p>
+    <div class="demo">
+      <div class="label">Live: the AI serving stack, top to bottom</div>
+      <div id="stackLayers" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="stackDetail" style="margin-top:14px;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:14px;min-height:56px;color:var(--muted);">Hover or tap a layer to see what it does.</div>
+    </div>
+    <div class="note"><b>Test yourself:</b> can you explain why a 70B model needs either quantization or a multi-GPU split, and where a gateway sits? Then you've hit the goal. ✅</div>
+  </section>
+
+  <footer>AI Infrastructure — Interactive Explainer · Companion to <em>Learnings/AI Infrastructure - GPUs, Serving, and the Stack.md</em></footer>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.12});
+document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+function dpr(c,h){const d=devicePixelRatio||1;const w=c.clientWidth;c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);return{ctx:x,w,h};}
+
+/* 1 CPU vs GPU */
+let cgAnim=null;
+function runCpuGpu(){
+  const c=document.getElementById('cpuGpuCanvas');
+  const total=48;let cpuDone=0,gpuDone=0,frame=0;
+  if(cgAnim)cancelAnimationFrame(cgAnim);
+  function draw(){
+    const {ctx,w,h}=dpr(c,220);ctx.clearRect(0,0,w,h);
+    const colW=w/2;
+    // CPU side: 4 cores, processes ~4 per tick
+    ctx.fillStyle='#9aa7b5';ctx.font='700 13px sans-serif';ctx.textAlign='center';
+    ctx.fillText('CPU — 4 fast cores (serial)',colW/2,20);
+    ctx.fillText('GPU — many cores (parallel)',colW+colW/2,20);
+    // grids
+    const cols=8,rows=6,cell=Math.min((colW-40)/cols,(h-60)/rows);
+    function grid(ox,done,col){
+      for(let i=0;i<total;i++){const r=Math.floor(i/cols),cc=i%cols;
+        const x=ox+20+cc*cell,y=36+r*cell;
+        ctx.fillStyle=i<done?col:'#222b38';
+        ctx.fillRect(x,y,cell-3,cell-3);}
+    }
+    grid(0,cpuDone,'#58a6ff');grid(colW,gpuDone,'#3fb950');
+    frame++;
+    if(frame%4===0&&cpuDone<total)cpuDone+=4;    // CPU slow
+    if(gpuDone<total)gpuDone=Math.min(total,gpuDone+total); // GPU one shot
+    if(cpuDone<total){cgAnim=requestAnimationFrame(draw);}
+    else{document.getElementById('cpuGpuResult').innerHTML='<span style="color:var(--green)">GPU finished all 48 in one parallel pass; the CPU ground through them a few at a time.</span>';}
+  }
+  document.getElementById('cpuGpuResult').textContent='';draw();
+}
+setTimeout(runCpuGpu,600);
+
+/* 3 VRAM */
+let vramBytes=2;
+function setVram(b,btn){vramBytes=b;document.querySelectorAll('#vramSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');drawVram();}
+function drawVram(){
+  const c=document.getElementById('vramCanvas');const {ctx,w,h}=dpr(c,150);ctx.clearRect(0,0,w,h);
+  const GPU=80; const need=70*vramBytes; // GB
+  const barW=w-20,x0=10,y0=30,bh=50;
+  // GPU capacity bar
+  ctx.fillStyle='#0d1117';ctx.strokeStyle='var(--border)';ctx.fillRect(x0,y0,barW,bh);
+  ctx.strokeStyle='#2d3644';ctx.strokeRect(x0,y0,barW,bh);
+  // fill relative to a 160GB scale so overflow is visible
+  const scale=barW/160;
+  const fillW=need*scale, capW=GPU*scale;
+  ctx.fillStyle=need>GPU?'rgba(248,81,73,.55)':'rgba(63,185,80,.55)';
+  ctx.fillRect(x0,y0,Math.min(fillW,barW),bh);
+  // capacity line at 80GB
+  ctx.strokeStyle='#f2cc60';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0+capW,y0-6);ctx.lineTo(x0+capW,y0+bh+6);ctx.stroke();
+  ctx.fillStyle='#f2cc60';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('80 GB GPU limit',x0+capW,y0-10);
+  ctx.fillStyle='#e6edf3';ctx.font='700 13px sans-serif';ctx.textAlign='left';
+  ctx.fillText('70B model needs '+need+' GB',x0+8,y0+bh/2+5);
+  const st=document.getElementById('vramStatus');
+  if(need>GPU)st.innerHTML=`<span style="color:var(--red)">${need} GB > 80 GB — won't fit! Split across ${Math.ceil(need/GPU)} GPUs, or quantize further.</span>`;
+  else st.innerHTML=`<span style="color:var(--green)">${need} GB fits in one 80 GB GPU ✓</span> <span style="color:var(--muted)">(quantization made it fit)</span>`;
+}
+drawVram();addEventListener('resize',drawVram);
+
+/* 4 TP vs PP */
+let parMode='tp',parT=0,parAnim=null;
+function setPar(m,btn){parMode=m;document.querySelectorAll('#parSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');
+  document.getElementById('parDesc').textContent=m==='tp'?'Each layer is sliced across all 3 GPUs — they sync every step (needs NVLink, best in one box).':'Layers are grouped per GPU — data flows GPU1→GPU2→GPU3 like an assembly line (works across servers).';
+}
+(function(){
+  const c=document.getElementById('parCanvas');
+  function draw(){
+    const {ctx,w,h}=dpr(c,200);ctx.clearRect(0,0,w,h);parT+=0.02;
+    const gpus=3,gw=(w-40)/gpus;
+    for(let g=0;g<gpus;g++){
+      const x=20+g*gw;
+      ctx.fillStyle='#161b22';ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(x,40,gw-14,120,10);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#9aa7b5';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('GPU '+(g+1),x+(gw-14)/2,32);
+      if(parMode==='tp'){
+        // each gpu shows all layers, sliced
+        for(let l=0;l<4;l++){ctx.fillStyle='rgba(88,166,255,.4)';ctx.fillRect(x+8,52+l*26,gw-30,18);}
+        const active=Math.floor(parT*2)%4;
+        ctx.fillStyle='#3fb950';ctx.fillRect(x+8,52+active*26,gw-30,18);
+      }else{
+        // gpu g holds a distinct layer group
+        const col=['#58a6ff','#bc8cff','#ffa657'][g];
+        ctx.fillStyle=col+'66';ctx.fillRect(x+8,52,gw-30,100);
+        ctx.fillStyle=col;ctx.font='700 12px sans-serif';ctx.fillText('layers '+(g*4+1)+'–'+(g*4+4),x+(gw-14)/2,105);
+      }
+    }
+    if(parMode==='tp'){
+      ctx.strokeStyle='rgba(63,185,80,.6)';ctx.lineWidth=2;
+      for(let g=0;g<gpus-1;g++){const x=20+g*gw+(gw-14);ctx.beginPath();ctx.moveTo(x,100);ctx.lineTo(x+14,100);ctx.stroke();}
+      ctx.fillStyle='#3fb950';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('⇄ sync every step',w/2,180);
+    }else{
+      const pos=(parT%1);const x=20+pos*(w-40);
+      ctx.fillStyle='#f2cc60';ctx.beginPath();ctx.arc(x,175,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#9aa7b5';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('data flows →',w/2,160);
+    }
+    parAnim=requestAnimationFrame(draw);
+  }
+  draw();
+})();
+setPar('tp',document.querySelector('#parSeg button'));
+
+/* 5 NVLink vs PCIe */
+function raceLinks(){
+  const c=document.getElementById('linkCanvas');let t=0;
+  function draw(){
+    const {ctx,w,h}=dpr(c,170);ctx.clearRect(0,0,w,h);
+    [['NVLink',50,'#3fb950',3.2],['PCIe',120,'#ffa657',1]].forEach(([name,y,col,speed])=>{
+      ctx.fillStyle='#161b22';ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(20,y-18,60,36,8);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.roundRect(w-80,y-18,60,36,8);ctx.fill();ctx.stroke();
+      ctx.fillStyle=col;ctx.font='11px sans-serif';ctx.textAlign='center';
+      ctx.fillText('GPU',50,y+4);ctx.fillText('GPU',w-50,y+4);
+      ctx.fillText(name,w/2,y-24);
+      ctx.strokeStyle='#2d3644';ctx.beginPath();ctx.moveTo(80,y);ctx.lineTo(w-80,y);ctx.stroke();
+      const prog=Math.min(1,t*speed/100);
+      const x=80+(w-160)*prog;
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();
+      if(prog>=1){ctx.fillStyle=col;ctx.font='700 12px sans-serif';ctx.fillText('done ✓',w/2,y+4);}
+    });
+    t++;
+    if(t*3.2/100<1.05)requestAnimationFrame(draw);
+    else{const {ctx,w}=dpr(c,170);ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('NVLink finished ~3× faster — why tensor parallelism needs it',w/2,158);}
+  }
+  draw();
+}
+setTimeout(raceLinks,900);
+
+/* 6 DPU */
+let dpuOn=false;
+function toggleDpu(){dpuOn=!dpuOn;document.getElementById('dpuBtn').textContent=dpuOn?'Remove the DPU':'Add a DPU →';drawDpu();}
+function drawDpu(){
+  const c=document.getElementById('dpuCanvas');const {ctx,w,h}=dpr(c,180);ctx.clearRect(0,0,w,h);
+  const tasks=['Networking','Storage','Security'];
+  // CPU box
+  ctx.fillStyle='#161b22';ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(20,40,120,110,10);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#58a6ff';ctx.font='700 13px sans-serif';ctx.textAlign='center';ctx.fillText('CPU',80,32);
+  // DPU box
+  if(dpuOn){ctx.fillStyle='#161b22';ctx.strokeStyle='#ff7b9c';ctx.beginPath();ctx.roundRect(w-140,40,120,110,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ff7b9c';ctx.fillText('DPU',w-80,32);}
+  tasks.forEach((t,i)=>{
+    const onDpu=dpuOn;
+    const x=onDpu?w-80:80,y=60+i*30;
+    ctx.fillStyle=onDpu?'rgba(255,123,156,.25)':'rgba(88,166,255,.25)';
+    ctx.strokeStyle=onDpu?'#ff7b9c':'#58a6ff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(x-52,y-11,104,22,6);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#e6edf3';ctx.font='11px sans-serif';ctx.fillText(t,x,y+4);
+  });
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText(dpuOn?'CPU freed to compute — DPU handles the rest':'CPU is bogged down doing networking/storage/security',w/2,170);
+}
+drawDpu();addEventListener('resize',drawDpu);
+
+/* 7 MIG */
+(function(){
+  const sl=document.getElementById('migSlider'),c=document.getElementById('migCanvas');
+  function draw(){
+    const n=+sl.value;document.getElementById('migCount').textContent=n;
+    const {ctx,w,h}=dpr(c,120);ctx.clearRect(0,0,w,h);
+    const cols=['#58a6ff','#bc8cff','#3fb950','#ffa657','#f2cc60','#ff7b9c','#79c0ff'];
+    const gap=6,x0=10,y0=20,bw=(w-20-gap*(n-1))/n,bh=80;
+    for(let i=0;i<n;i++){const x=x0+i*(bw+gap);
+      ctx.fillStyle=cols[i]+'33';ctx.strokeStyle=cols[i];ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(x,y0,bw,bh,8);ctx.fill();ctx.stroke();
+      ctx.fillStyle=cols[i];ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('job '+(i+1),x+bw/2,y0+bh/2+4);}
+    ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText(n===1?'One GPU, one job (could be underused)':`One GPU → ${n} isolated instances, ${n} jobs at once`,w/2,118);
+  }
+  sl.addEventListener('input',draw);draw();addEventListener('resize',draw);
+})();
+
+/* 8 batching */
+let reqs=[];
+function addReq(){if(reqs.length<8)reqs.push({y:Math.random()});drawBatch();}
+function serveBatch(){
+  if(!reqs.length)return;const c=document.getElementById('batchCanvas');let step=0;
+  function anim(){
+    const {ctx,w,h}=dpr(c,180);ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#161b22';ctx.strokeStyle='#bc8cff';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(w/2-45,60,90,60,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#bc8cff';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText('GPU',w/2,55);ctx.fillText('batch',w/2,95);
+    reqs.forEach((r,i)=>{const prog=Math.min(1,step/40);const x=30+(w/2-75-30)*prog;const y=40+i*16;
+      ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();});
+    step++;if(step<44)requestAnimationFrame(anim);
+    else{const {ctx,w}=dpr(c,180);ctx.fillStyle='#3fb950';ctx.font='700 13px sans-serif';ctx.textAlign='center';ctx.fillText('✓ '+reqs.length+' requests served in one pass',w/2,150);reqs=[];}
+  }
+  anim();
+}
+function drawBatch(){
+  const c=document.getElementById('batchCanvas');const {ctx,w,h}=dpr(c,180);ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#161b22';ctx.strokeStyle='#bc8cff';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(w/2-45,60,90,60,10);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#bc8cff';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText('GPU',w/2,55);
+  reqs.forEach((r,i)=>{ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(30,40+i*16,5,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.fillText(reqs.length?reqs.length+' request(s) waiting — click "Serve the batch"':'Click "Request arrives" a few times',w/2,150);
+}
+drawBatch();addEventListener('resize',drawBatch);
+
+/* 10 full stack */
+const stack=[
+  {n:'OpenWebUI',d:'The chat UI users actually see. A front-end — not a server. Points at a backend.',c:'#58a6ff'},
+  {n:'Gateway / Guardrails',d:'Routes requests, enforces policy, scans inputs & outputs. The security & control layer (Section 3).',c:'#ff7b9c'},
+  {n:'Inference server (vLLM / NIM)',d:'Loads the model, batches requests, manages the KV cache, exposes an API.',c:'#bc8cff'},
+  {n:'CUDA',d:'NVIDIA\'s GPU programming layer everything is built on. The moat.',c:'#3fb950'},
+  {n:'GPUs (NVLink / PCIe / DPU)',d:'The silicon. VRAM is the constraint; NVLink connects them; DPUs offload networking & security.',c:'#ffa657'},
+];
+(function(){
+  const box=document.getElementById('stackLayers');
+  stack.forEach(l=>{
+    const d=document.createElement('div');
+    d.style.cssText=`background:#0d1117;border:1px solid var(--border);border-left:4px solid ${l.c};border-radius:8px;padding:12px 16px;cursor:pointer;font-weight:600;transition:.15s;`;
+    d.textContent=l.n;
+    const show=()=>{document.getElementById('stackDetail').innerHTML=`<b style="color:${l.c}">${l.n}</b><br><span style="color:var(--text)">${l.d}</span>`;d.style.transform='translateX(4px)';};
+    d.addEventListener('mouseenter',show);d.addEventListener('click',show);
+    d.addEventListener('mouseleave',()=>d.style.transform='none');
+    box.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
