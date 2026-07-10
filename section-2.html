@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Architecture — Interactive Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117;--panel:#161b22;--panel-2:#1c2431;--border:#2d3644;--text:#e6edf3;--muted:#9aa7b5;
+    --accent:#58a6ff;--accent-2:#79c0ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--pink:#ff7b9c;--yellow:#f2cc60;--radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%,#16202e 0%,var(--bg) 55%) fixed;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 120px;}
+  .backlink{display:inline-block;margin:26px 0 0;color:var(--accent-2);text-decoration:none;font-size:14px;}
+  .backlink:hover{text-decoration:underline;}
+  header.hero{text-align:center;padding:30px 20px 40px;}
+  header.hero .kicker{text-transform:uppercase;letter-spacing:3px;font-size:12px;color:var(--accent);font-weight:700;}
+  header.hero h1{font-size:clamp(32px,6vw,52px);margin:12px 0 10px;background:linear-gradient(90deg,#79c0ff,#bc8cff,#ff7b9c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+  header.hero p{color:var(--muted);font-size:18px;max-width:620px;margin:0 auto;}
+  .goal-badge{display:inline-block;margin-top:22px;background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.35);color:var(--accent-2);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;}
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--purple));z-index:100;transition:width .1s linear;}
+  nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:20px 0 50px;}
+  nav.toc h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:30px;}
+  nav.toc li{margin:5px 0;}
+  nav.toc a{color:var(--accent-2);text-decoration:none;}
+  nav.toc a:hover{text-decoration:underline;}
+  section.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:26px 0;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+  section.card.visible{opacity:1;transform:none;}
+  section.card h2{margin:0 0 6px;font-size:26px;display:flex;align-items:center;gap:12px;}
+  section.card h2 .num{font-size:14px;font-weight:700;background:var(--panel-2);border:1px solid var(--border);color:var(--accent);min-width:34px;height:34px;padding:0 8px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .lead{color:var(--muted);margin:0 0 18px;}
+  p{margin:12px 0;} strong{color:#fff;}
+  .hl{color:var(--accent-2);font-weight:600;} .tag{color:var(--purple);font-weight:600;}
+  .demo{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:20px 0;}
+  .demo .label{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .demo .label::before{content:"▶";color:var(--green);font-size:10px;}
+  button,.btn{background:var(--accent);color:#06131f;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;transition:transform .1s,filter .15s;}
+  button:hover{filter:brightness(1.1);} button:active{transform:scale(.96);}
+  button.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
+  input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  .token{display:inline-block;padding:4px 9px;margin:3px;border-radius:7px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;border:1px solid rgba(255,255,255,0.12);animation:pop .35s ease backwards;}
+  @keyframes pop{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
+  canvas{display:block;width:100%;border-radius:10px;}
+  .val{font-family:ui-monospace,monospace;background:#0d1117;border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--yellow);}
+  .note{border-left:3px solid var(--accent);background:rgba(88,166,255,0.07);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:15px;}
+  .note.f5{border-left-color:var(--pink);background:rgba(255,123,156,0.07);}
+  .note b{color:var(--accent-2);} .note.f5 b{color:var(--pink);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;}
+  td strong{color:var(--accent-2);}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;}
+  .counter{font-family:ui-monospace,monospace;font-size:15px;}
+  .chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;}
+  .chip.open{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.4);}
+  .chip.api{background:rgba(255,123,156,.15);color:var(--pink);border:1px solid rgba(255,123,156,.4);}
+  @media (max-width:600px){nav.toc ol{columns:1;}section.card{padding:22px;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+  <a href="index.html" class="backlink">← Back to all sections</a>
+  <header class="hero">
+    <div class="kicker">Section 2</div>
+    <h1>LLM Architecture</h1>
+    <p>How modern LLMs actually function — and why one model is faster, cheaper, or smarter than another.</p>
+    <div class="goal-badge">🎯 Goal: know why one model beats another</div>
+  </header>
+
+  <nav class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><a href="#s1">Attention (Q / K / V)</a></li>
+      <li><a href="#s2">Self-Attention & the n² problem</a></li>
+      <li><a href="#s3">Positional Encoding</a></li>
+      <li><a href="#s4">KV Cache</a></li>
+      <li><a href="#s5">Speculative Decoding</a></li>
+      <li><a href="#s6">Chain of Thought</a></li>
+      <li><a href="#s7">Function / Tool Calling</a></li>
+      <li><a href="#s8">Agents</a></li>
+      <li><a href="#s9">The Model Landscape</a></li>
+      <li><a href="#s10">Faster / Cheaper / Smarter</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 Attention QKV -->
+  <section class="card" id="s1">
+    <h2><span class="num">1</span> Attention — Query, Key, Value</h2>
+    <p class="lead">The engine of every modern LLM, made concrete.</p>
+    <p>Each token creates three vectors: a <strong>Query</strong> ("what am I looking for?"), a <strong>Key</strong> ("what do I offer?"), and a <strong>Value</strong> (its actual content). The model matches one token's Query against every Key to get <span class="hl">relevance scores</span>, turns those into weights, and pulls a weighted blend of the Values.</p>
+    <div class="demo">
+      <div class="label">Live: "it" looks for what it refers to</div>
+      <p style="text-align:center;font-size:18px;margin:4px 0 2px;">The <b>trophy</b> didn't fit in the <b>suitcase</b> because <span style="color:var(--yellow);font-weight:700">it</span> was too big.</p>
+      <div id="qkvBars" style="margin-top:14px;"></div>
+      <div class="controls"><button onclick="qkvRun()">Compute attention for "it" →</button></div>
+      <p style="color:var(--muted);font-size:14px;">Q from "it" scores highest against the Key of <b>trophy</b> — so that's what it attends to.</p>
+    </div>
+  </section>
+
+  <!-- 2 Self attention n2 -->
+  <section class="card" id="s2">
+    <h2><span class="num">2</span> Self-Attention & the n² Problem</h2>
+    <p class="lead">"Self" means every token attends to every other token — in the same sentence.</p>
+    <p>That all-pairs comparison is powerful, but the number of connections grows with the <span class="hl">square</span> of the length. Double the tokens → <strong>4×</strong> the work. This single fact is why long context is expensive and why every trick in this section exists.</p>
+    <div class="demo">
+      <div class="label">Live: watch connections explode as tokens grow</div>
+      <canvas id="n2Canvas" height="240"></canvas>
+      <input type="range" id="n2Slider" min="2" max="14" value="5">
+      <div style="margin-top:8px;">Tokens: <span class="val" id="n2Count">5</span> &nbsp;·&nbsp; Connections: <span class="val" id="n2Conns" style="color:var(--pink)">25</span></div>
+    </div>
+  </section>
+
+  <!-- 3 Positional encoding -->
+  <section class="card" id="s3">
+    <h2><span class="num">3</span> Positional Encoding</h2>
+    <p class="lead">Attention alone is orderless — position has to be added in.</p>
+    <p>Without position info, "dog bites man" and "man bites dog" look identical to the model. Positional encoding tags each token with <span class="hl">where</span> it sits, so order — and therefore meaning — is preserved.</p>
+    <div class="demo">
+      <div class="label">Live: same words, swapped positions</div>
+      <div id="posDemo" style="text-align:center;"></div>
+      <div class="controls" style="justify-content:center;"><button onclick="posSwap()">Swap the order ⇄</button></div>
+    </div>
+    <div class="note"><b>In practice:</b> modern models use <b>RoPE</b> (rotary position embedding), which also helps them stretch to longer inputs than they trained on.</div>
+  </section>
+
+  <!-- 4 KV cache -->
+  <section class="card" id="s4">
+    <h2><span class="num">4</span> KV Cache <span style="font-size:13px;color:var(--pink);font-weight:700">★ the big one</span></h2>
+    <p class="lead">The single most important concept for cost and speed.</p>
+    <p>To generate each new token, the model needs the Keys and Values of every previous token. Recomputing them all every step is hugely wasteful — so we <strong>cache</strong> them and only compute the new token's. But that cache <span class="hl">grows with every token</span> and lives in GPU memory — it's the real bottleneck you size hardware for.</p>
+    <div class="demo">
+      <div class="label">Live: recompute-everything vs cache-and-append</div>
+      <canvas id="kvCanvas" height="150"></canvas>
+      <div class="controls">
+        <button onclick="kvStep()">Generate next token →</button>
+        <button class="ghost" onclick="kvReset()">Reset</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:14px;" class="counter">
+        <span>Without cache: <span style="color:var(--pink)" id="kvNoCache">0</span> ops</span>
+        <span>With cache: <span style="color:var(--green)" id="kvCache">0</span> ops</span>
+      </div>
+    </div>
+    <div class="note f5"><b>Your world:</b> KV-cache size is what balloons GPU memory in long chats — the practical constraint behind AI infrastructure sizing.</div>
+  </section>
+
+  <!-- 5 Speculative decoding -->
+  <section class="card" id="s5">
+    <h2><span class="num">5</span> Speculative Decoding</h2>
+    <p class="lead">Free speed: a tiny model guesses, the big model checks.</p>
+    <p>Generation is slow because it's one token at a time. A small, fast <strong>draft model</strong> races ahead and proposes several tokens; the big model then <span class="hl">verifies them all in a single pass</span>. Correct guesses are kept for free; wrong ones are thrown out and corrected. Output quality is <strong>identical</strong> — the big model always has the final say.</p>
+    <div class="demo">
+      <div class="label">Live: draft guesses, verifier accepts / rejects</div>
+      <div id="specText" style="font-size:19px;min-height:34px;margin-bottom:12px;"></div>
+      <div id="specStatus" style="color:var(--muted);font-size:14px;min-height:20px;"></div>
+      <div class="controls"><button onclick="specRun()">Run one round →</button><button class="ghost" onclick="specReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 6 CoT -->
+  <section class="card" id="s6">
+    <h2><span class="num">6</span> Chain of Thought</h2>
+    <p class="lead">Letting the model "think out loud" makes it dramatically smarter.</p>
+    <p>Because it's a next-token predictor, writing out intermediate <span class="hl">reasoning steps</span> gives the model more compute and scratch space before committing to an answer. The same model, same weights — just allowed to think — gets far more math and logic right.</p>
+    <div class="demo">
+      <div class="label">Live: same question, two modes</div>
+      <p style="font-size:16px;">Q: <em>A shop has 23 apples. It sells 15 and buys 9 more. How many now?</em></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;" id="cotGrid">
+        <div style="background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;color:var(--pink);font-weight:700;margin-bottom:8px;">DIRECT ANSWER</div>
+          <div id="cotDirect" style="font-size:16px;">—</div>
+        </div>
+        <div style="background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:8px;">STEP BY STEP</div>
+          <div id="cotSteps" style="font-size:14px;line-height:1.7;">—</div>
+        </div>
+      </div>
+      <div class="controls"><button onclick="cotRun()">Answer both →</button><button class="ghost" onclick="cotReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 7 Tool calling -->
+  <section class="card" id="s7">
+    <h2><span class="num">7</span> Function / Tool Calling</h2>
+    <p class="lead">How an LLM reaches outside its own text.</p>
+    <p>The model can't actually check the weather — it only writes text. So instead of answering, it emits a <span class="hl">structured call</span>. Your app runs the real function and hands the result back, and the model continues with real data. ("Function calling" and "tool calling" mean the same thing.)</p>
+    <div class="demo">
+      <div class="label">Live: the round-trip</div>
+      <div id="toolFlow" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div class="controls"><button onclick="toolRun()">Ask "What's the weather in Singapore?" →</button><button class="ghost" onclick="toolReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 8 Agents -->
+  <section class="card" id="s8">
+    <h2><span class="num">8</span> Agents</h2>
+    <p class="lead">An LLM in a loop — thinking, acting, and observing until the goal is met.</p>
+    <p>A single prompt gives you one answer. An <strong>agent</strong> runs a cycle: <span class="hl">Think → Act (use a tool) → Observe → repeat</span>, deciding its own next step each time. That autonomy is what makes agents powerful — and what makes them a serious security surface, because they take real actions.</p>
+    <div class="demo">
+      <div class="label">Live: the agent loop</div>
+      <canvas id="agentCanvas" height="260"></canvas>
+      <div class="controls"><button onclick="agentTick()">Step the loop →</button><button class="ghost" onclick="agentAuto()" id="agentAutoBtn">Auto-run ▶</button></div>
+      <div id="agentLog" style="margin-top:12px;font-family:ui-monospace,monospace;font-size:13px;color:var(--muted);min-height:20px;"></div>
+    </div>
+    <div class="note f5"><b>Why it matters:</b> agents that take actions autonomously are exactly the surface AI-security controls (input/output guardrails, tool-access policy) are built to govern.</div>
+  </section>
+
+  <!-- 9 Model landscape -->
+  <section class="card" id="s9">
+    <h2><span class="num">9</span> The Model Landscape</h2>
+    <p class="lead">The one distinction that explains most of the market.</p>
+    <p><span class="chip open">Open-weight</span> = you can download and run it yourself, on-prem. &nbsp; <span class="chip api">API-only</span> = you rent it through a cloud endpoint. Click a model:</p>
+    <div class="demo">
+      <div class="label">Live: explore the models</div>
+      <div id="modelGrid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+      <div id="modelDetail" style="margin-top:16px;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:16px;min-height:70px;">Click a model above to see its profile.</div>
+    </div>
+  </section>
+
+  <!-- 10 synthesis -->
+  <section class="card" id="s10" style="background:linear-gradient(135deg,rgba(188,140,255,0.1),rgba(88,166,255,0.08));border:1px solid rgba(188,140,255,0.3);">
+    <h2><span class="num">🎯</span> Faster, Cheaper, or Smarter?</h2>
+    <p class="lead">Everything above, distilled into the three questions customers actually ask.</p>
+    <table>
+      <tr><th>Goal</th><th>What drives it</th></tr>
+      <tr><td><strong>Faster</strong></td><td>Fewer <em>active</em> parameters (MoE) · speculative decoding · smaller model · efficient KV-cache handling</td></tr>
+      <tr><td><strong>Cheaper</strong></td><td>Open-weight self-hosting (no per-token fee) · MoE · quantization · shorter context</td></tr>
+      <tr><td><strong>Smarter</strong></td><td>More parameters · more/better training data · chain-of-thought / reasoning training · larger context window</td></tr>
+    </table>
+    <div class="note"><b>Test yourself:</b> given two models, can you explain the trade-off? If yes, you've hit the section goal. ✅</div>
+  </section>
+
+  <footer>LLM Architecture — Interactive Explainer · Companion to <em>Learnings/LLM Architecture - How Modern Models Work.md</em></footer>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.12});
+document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+function dpr(c,h){const d=devicePixelRatio||1;const w=c.clientWidth;c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);return{ctx:x,w,h};}
+
+/* 1 QKV */
+function qkvRun(){
+  const words=[['The',5],['trophy',88],['didn\'t',6],['fit',12],['suitcase',34],['because',4],['was',8],['too',6],['big',22]];
+  const box=document.getElementById('qkvBars');box.innerHTML='';
+  const max=Math.max(...words.map(w=>w[1]));
+  words.forEach(([w,s],i)=>{
+    const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:10px;margin:5px 0;';
+    const top=s===max;
+    row.innerHTML=`<div style="width:80px;text-align:right;font-family:ui-monospace,monospace;font-size:13px;color:${top?'var(--yellow)':'var(--text)'}">${w}</div>
+      <div style="flex:1;background:#0d1117;border:1px solid var(--border);border-radius:6px;height:20px;overflow:hidden;">
+      <div style="height:100%;width:0%;background:${top?'linear-gradient(90deg,var(--yellow),var(--orange))':'linear-gradient(90deg,var(--accent),var(--purple))'};transition:width .6s ease ${i*0.05}s;border-radius:6px;"></div></div>
+      <div style="width:38px;font-size:12px;color:var(--muted)">${s}%</div>`;
+    box.appendChild(row);
+    requestAnimationFrame(()=>row.querySelector('div>div').style.width=(s/max*100)+'%');
+  });
+}
+
+/* 2 n^2 */
+(function(){
+  const c=document.getElementById('n2Canvas'),sl=document.getElementById('n2Slider');
+  function draw(){
+    const n=+sl.value;document.getElementById('n2Count').textContent=n;
+    document.getElementById('n2Conns').textContent=n*n;
+    const {ctx,w,h}=dpr(c,240);ctx.clearRect(0,0,w,h);
+    const cx=w/2,cy=h/2,r=Math.min(w,h)/2-30;const pts=[];
+    for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2-Math.PI/2;pts.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r});}
+    ctx.strokeStyle='rgba(255,123,156,0.25)';ctx.lineWidth=1;
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){if(i!==j){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}}
+    pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#161b22';ctx.fill();ctx.strokeStyle='#58a6ff';ctx.lineWidth=2.5;ctx.stroke();});
+  }
+  sl.addEventListener('input',draw);draw();addEventListener('resize',draw);
+})();
+
+/* 3 positional */
+let posState=0;
+function renderPos(){
+  const order=posState===0?['dog','bites','man']:['man','bites','dog'];
+  const meaning=posState===0?'🐕 → 😖 the dog is the aggressor':'😖 → 🐕 the man is the aggressor';
+  document.getElementById('posDemo').innerHTML=
+    order.map((w,i)=>`<span class="token" style="background:rgba(88,166,255,.15);color:var(--accent-2);font-size:18px;">${w}<sub style="color:var(--yellow);font-size:11px;"> pos ${i+1}</sub></span>`).join(' ')+
+    `<div style="margin-top:14px;font-size:16px;color:var(--green);">${meaning}</div>`;
+}
+function posSwap(){posState=1-posState;renderPos();}
+renderPos();
+
+/* 4 KV cache */
+let kvN=0;
+function kvStep(){
+  kvN++;
+  let noCache=0;for(let i=1;i<=kvN;i++)noCache+=i; // recompute all each step
+  document.getElementById('kvNoCache').textContent=noCache;
+  document.getElementById('kvCache').textContent=kvN; // 1 op per new token
+  const {ctx,w,h}=dpr(document.getElementById('kvCanvas'),150);ctx.clearRect(0,0,w,h);
+  const bw=Math.min(34,(w-40)/Math.max(kvN,8));
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.fillText('KV cache (green = reused, blue = newly computed):',10,18);
+  for(let i=0;i<kvN;i++){
+    const x=14+i*(bw+4),y=40;
+    ctx.fillStyle=(i===kvN-1)?'#58a6ff':'rgba(63,185,80,.5)';
+    ctx.fillRect(x,y,bw,60);ctx.strokeStyle=(i===kvN-1)?'#79c0ff':'#3fb950';ctx.strokeRect(x,y,bw,60);
+    ctx.fillStyle='#e6edf3';ctx.font='11px monospace';ctx.fillText('t'+(i+1),x+bw/2-7,y+35);
+  }
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';
+  ctx.fillText('Only the newest token (blue) is computed. The rest are read from cache.',10,125);
+}
+function kvReset(){kvN=0;document.getElementById('kvNoCache').textContent='0';document.getElementById('kvCache').textContent='0';const {ctx,w,h}=dpr(document.getElementById('kvCanvas'),150);ctx.clearRect(0,0,w,h);}
+kvReset();
+
+/* 5 speculative */
+const specDraft=['The','cat','sat','on','the','mat','and','purred'];
+let specI=0;
+function specRun(){
+  if(specI>=specDraft.length){document.getElementById('specStatus').textContent='Done — sentence complete.';return;}
+  const box=document.getElementById('specText');
+  // draft proposes up to 3
+  const n=Math.min(3,specDraft.length-specI);
+  // simulate: last of the batch sometimes rejected
+  const reject = (specI+n>=4 && specI<5)?1:0;
+  const accepted=n-reject;
+  for(let k=0;k<n;k++){
+    const sp=document.createElement('span');sp.className='token';sp.textContent=specDraft[specI+k];
+    if(k<accepted){sp.style.cssText+='background:rgba(63,185,80,.18);color:var(--green);border-color:#3fb95055;';}
+    else{sp.style.cssText+='background:rgba(255,123,156,.18);color:var(--pink);border-color:#ff7b9c55;text-decoration:line-through;';}
+    box.appendChild(sp);box.appendChild(document.createTextNode(' '));
+  }
+  document.getElementById('specStatus').innerHTML=
+    `Draft guessed <b style="color:var(--accent-2)">${n}</b> tokens · verifier accepted <b style="color:var(--green)">${accepted}</b>`+
+    (reject?` · rejected <b style="color:var(--pink)">${reject}</b> (corrected)`:` · all correct, free speed!`);
+  specI+=accepted; // rejected token is re-drafted next round
+}
+function specReset(){specI=0;document.getElementById('specText').innerHTML='';document.getElementById('specStatus').textContent='';}
+
+/* 6 CoT */
+function cotRun(){
+  const d=document.getElementById('cotDirect'),s=document.getElementById('cotSteps');
+  d.innerHTML='<span style="color:var(--pink);font-weight:700;">8</span> <span style="color:var(--muted);font-size:13px;">(blurted — wrong)</span>';
+  const steps=['Start: 23 apples','Sells 15 → 23 − 15 = 8','Buys 9 → 8 + 9 = <b style="color:var(--green)">17</b>','Answer: <b style="color:var(--green)">17</b> ✓'];
+  s.innerHTML='';steps.forEach((t,i)=>{const div=document.createElement('div');div.style.cssText='opacity:0;transform:translateX(-6px);transition:.4s '+(i*0.4)+'s;';div.innerHTML='• '+t;s.appendChild(div);requestAnimationFrame(()=>{div.style.opacity=1;div.style.transform='none';});});
+}
+function cotReset(){document.getElementById('cotDirect').textContent='—';document.getElementById('cotSteps').textContent='—';}
+
+/* 7 tool calling */
+const toolSteps=[
+  {who:'User',col:'var(--accent)',txt:'What\'s the weather in Singapore?'},
+  {who:'LLM',col:'var(--purple)',txt:'I can\'t know that directly — emitting a tool call:'},
+  {who:'Tool call',col:'var(--yellow)',txt:'get_weather(city="Singapore")',mono:true},
+  {who:'Your app',col:'var(--green)',txt:'runs the real API → { temp: 31°C, humid: 84% }',mono:true},
+  {who:'LLM',col:'var(--purple)',txt:'It\'s currently 31°C and humid in Singapore.'}
+];
+let toolI=0;
+function toolRun(){
+  if(toolI>=toolSteps.length)return;
+  const s=toolSteps[toolI];const box=document.getElementById('toolFlow');
+  const div=document.createElement('div');
+  div.style.cssText=`background:#0d1117;border:1px solid var(--border);border-left:3px solid ${s.col};border-radius:8px;padding:10px 14px;opacity:0;transform:translateY(8px);transition:.35s;`;
+  div.innerHTML=`<span style="color:${s.col};font-weight:700;font-size:13px;">${s.who}</span><br><span style="${s.mono?'font-family:ui-monospace,monospace;font-size:13px;':''}">${s.txt}</span>`;
+  box.appendChild(div);requestAnimationFrame(()=>{div.style.opacity=1;div.style.transform='none';});
+  toolI++;
+}
+function toolReset(){toolI=0;document.getElementById('toolFlow').innerHTML='';}
+
+/* 8 agent loop */
+const agentPhases=[{t:'THINK',c:'#58a6ff',d:'I need the latest sales figure'},{t:'ACT',c:'#f2cc60',d:'query_database("Q2 sales")'},{t:'OBSERVE',c:'#3fb950',d:'→ $4.2M returned'},{t:'THINK',c:'#58a6ff',d:'Now compare to target'},{t:'ACT',c:'#f2cc60',d:'get_target("Q2")'},{t:'OBSERVE',c:'#3fb950',d:'→ $4.0M, goal beaten'},{t:'DONE',c:'#bc8cff',d:'Q2 beat target by $0.2M ✓'}];
+let agentP=0,agentTimer=null;
+function drawAgent(){
+  const {ctx,w,h}=dpr(document.getElementById('agentCanvas'),260);ctx.clearRect(0,0,w,h);
+  const cx=w/2,cy=125,r=78;const nodes=[{t:'THINK',c:'#58a6ff'},{t:'ACT',c:'#f2cc60'},{t:'OBSERVE',c:'#3fb950'}];
+  // loop arrows
+  ctx.strokeStyle='rgba(150,160,180,.3)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  const cur=agentPhases[Math.min(agentP,agentPhases.length-1)];
+  nodes.forEach((n,i)=>{
+    const a=(i/3)*Math.PI*2-Math.PI/2;const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;
+    const active=cur.t===n.t;
+    ctx.beginPath();ctx.arc(x,y,active?30:24,0,Math.PI*2);
+    ctx.fillStyle=active?n.c:'#161b22';ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle=n.c;ctx.stroke();
+    ctx.fillStyle=active?'#06131f':n.c;ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText(n.t,x,y+4);
+  });
+  ctx.fillStyle=cur.c;ctx.font='700 14px sans-serif';ctx.textAlign='center';
+  ctx.fillText(cur.t==='DONE'?'✓ GOAL REACHED':cur.t,cx,cy+3);
+  document.getElementById('agentLog').innerHTML=`<span style="color:${cur.c}">▸ ${cur.t}:</span> ${cur.d}`;
+}
+function agentTick(){agentP=(agentP+1)%agentPhases.length;drawAgent();}
+function agentAuto(){
+  const btn=document.getElementById('agentAutoBtn');
+  if(agentTimer){clearInterval(agentTimer);agentTimer=null;btn.textContent='Auto-run ▶';return;}
+  btn.textContent='Pause ⏸';agentTimer=setInterval(()=>{agentP=(agentP+1)%agentPhases.length;drawAgent();if(agentP===agentPhases.length-1){clearInterval(agentTimer);agentTimer=null;btn.textContent='Auto-run ▶';}},900);
+}
+drawAgent();
+
+/* 9 model landscape */
+const models=[
+  {n:'GPT',m:'OpenAI',a:'api',d:'The category-definer. Strong all-rounder, closed/API-only. The benchmark others are measured against.'},
+  {n:'Claude',m:'Anthropic',a:'api',d:'Strong reasoning & coding, long context, safety-focused. API-only.'},
+  {n:'Gemini',m:'Google',a:'api',d:'Natively multimodal, very large context, tied into Google Cloud. API-only.'},
+  {n:'Llama',m:'Meta',a:'open',d:'The open-weight standard that seeded the whole ecosystem. Self-hostable on-prem.'},
+  {n:'Mistral',m:'Mistral AI 🇫🇷',a:'open',d:'Efficient European models; Mixtral popularized open Mixture-of-Experts.'},
+  {n:'Gemma',m:'Google',a:'open',d:'Google\'s small open models — laptop / edge friendly.'},
+  {n:'Qwen',m:'Alibaba',a:'open',d:'Very strong multilingual performance across a wide range of sizes. Open-weight.'},
+  {n:'DeepSeek',m:'DeepSeek 🇨🇳',a:'open',d:'MoE at scale — frontier quality at strikingly low cost. Shook the market.'}
+];
+(function(){
+  const grid=document.getElementById('modelGrid');
+  models.forEach(mo=>{
+    const b=document.createElement('button');b.className='ghost';
+    b.style.cssText='padding:8px 14px;';
+    b.innerHTML=`${mo.n} <span class="chip ${mo.a}" style="margin-left:6px;transform:scale(.85);">${mo.a==='open'?'open':'API'}</span>`;
+    b.onclick=()=>{
+      document.getElementById('modelDetail').innerHTML=
+        `<div style="font-size:17px;font-weight:700;">${mo.n} <span style="color:var(--muted);font-size:14px;font-weight:400;">· ${mo.m}</span> <span class="chip ${mo.a}">${mo.a==='open'?'Open-weight':'API-only'}</span></div>
+         <div style="margin-top:8px;color:var(--text)">${mo.d}</div>`;
+    };
+    grid.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
