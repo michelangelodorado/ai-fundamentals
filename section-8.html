@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Observability — Interactive Explainer</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2431;--border:#2d3644;--text:#e6edf3;--muted:#9aa7b5;--accent:#58a6ff;--accent-2:#79c0ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--pink:#ff7b9c;--yellow:#f2cc60;--red:#f85149;--radius:14px;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%,#16202e 0%,var(--bg) 55%) fixed;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 120px;}
+  .backlink{display:inline-block;margin:26px 0 0;color:var(--accent-2);text-decoration:none;font-size:14px;}
+  .backlink:hover{text-decoration:underline;}
+  header.hero{text-align:center;padding:30px 20px 40px;}
+  header.hero .kicker{text-transform:uppercase;letter-spacing:3px;font-size:12px;color:var(--green);font-weight:700;}
+  header.hero h1{font-size:clamp(32px,6vw,52px);margin:12px 0 10px;background:linear-gradient(90deg,#3fb950,#79c0ff,#bc8cff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+  header.hero p{color:var(--muted);font-size:18px;max-width:640px;margin:0 auto;}
+  .goal-badge{display:inline-block;margin-top:22px;background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);color:var(--green);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;}
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--green),var(--accent));z-index:100;transition:width .1s linear;}
+  nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:20px 0 50px;}
+  nav.toc h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:30px;}
+  nav.toc li{margin:5px 0;} nav.toc a{color:var(--accent-2);text-decoration:none;} nav.toc a:hover{text-decoration:underline;}
+  section.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:26px 0;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+  section.card.visible{opacity:1;transform:none;}
+  section.card h2{margin:0 0 6px;font-size:26px;display:flex;align-items:center;gap:12px;}
+  section.card h2 .num{font-size:14px;font-weight:700;background:var(--panel-2);border:1px solid var(--border);color:var(--green);min-width:34px;height:34px;padding:0 8px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .lead{color:var(--muted);margin:0 0 18px;}
+  p{margin:12px 0;} strong{color:#fff;}
+  .hl{color:var(--accent-2);font-weight:600;} .tag{color:var(--purple);font-weight:600;}
+  .demo{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:20px 0;}
+  .demo .label{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .demo .label::before{content:"▶";color:var(--green);font-size:10px;}
+  button,.btn{background:var(--accent);color:#06131f;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;transition:transform .1s,filter .15s;}
+  button:hover{filter:brightness(1.1);} button:active{transform:scale(.96);}
+  button.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  canvas{display:block;width:100%;border-radius:10px;}
+  .val{font-family:ui-monospace,monospace;background:#0d1117;border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--yellow);}
+  .note{border-left:3px solid var(--accent);background:rgba(88,166,255,0.07);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:15px;}
+  .note.f5{border-left-color:var(--pink);background:rgba(255,123,156,0.07);}
+  .note b{color:var(--accent-2);} .note.f5 b{color:var(--pink);}
+  pre{background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto;font-size:13.5px;line-height:1.6;margin:0;white-space:pre-wrap;}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);} th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;} td strong{color:var(--accent-2);}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;}
+  @media (max-width:600px){nav.toc ol{columns:1;}section.card{padding:22px;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+  <a href="index.html" class="backlink">← Back to all sections</a>
+  <header class="hero">
+    <div class="kicker">Section 8</div>
+    <h1>AI Observability</h1>
+    <p>Seeing inside your AI system — the classic three pillars, plus the tokens, TTFT, cost, and quality signals a normal monitoring stack misses.</p>
+    <div class="goal-badge">📊 Goal: why "latency" splits into TTFT and TPS</div>
+  </header>
+
+  <nav class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><a href="#s1">Pillars + the AI Layer</a></li>
+      <li><a href="#s2">OpenTelemetry</a></li>
+      <li><a href="#s3">Tracing</a></li>
+      <li><a href="#s4">Metrics</a></li>
+      <li><a href="#s5">Token Usage</a></li>
+      <li><a href="#s6">TTFT vs TPS</a></li>
+      <li><a href="#s7">Cost Monitoring</a></li>
+      <li><a href="#s8">Prompt Logs & Privacy</a></li>
+      <li><a href="#s9">Evaluation Metrics</a></li>
+      <li><a href="#s10">The Tool Stack</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 pillars -->
+  <section class="card" id="s1">
+    <h2><span class="num">1</span> Pillars + the AI Layer</h2>
+    <p class="lead">Observability = answering "what's happening inside, and why?" from the outside.</p>
+    <p>The classic three pillars — <strong>traces, metrics, logs</strong> — still hold. AI just stacks an <span class="hl">extra layer</span> on top: tokens, TTFT, cost, quality. Same reason an AI gateway differs from a normal one — the workload is different, so the telemetry must be too.</p>
+    <div class="demo">
+      <div class="label">The stack of signals</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="background:rgba(63,185,80,.12);border:1px solid var(--green);border-radius:8px;padding:10px 14px;"><b style="color:var(--green)">AI layer</b> — tokens · TTFT · TPS · cost · prompt logs · eval scores</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px;">▲ sits on top of ▲</div>
+        <div style="background:rgba(88,166,255,.1);border:1px solid var(--accent);border-radius:8px;padding:10px 14px;"><b style="color:var(--accent-2)">Classic pillars</b> — traces · metrics · logs</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 OTel -->
+  <section class="card" id="s2">
+    <h2><span class="num">2</span> OpenTelemetry (OTel)</h2>
+    <p class="lead">Instrument once, send anywhere.</p>
+    <p><strong>OpenTelemetry</strong> is the vendor-neutral open standard for emitting traces, metrics, and logs — so you're not locked into one backend. There's now a <span class="hl">GenAI semantic convention</span> that standardizes how LLM attributes (model, tokens) are named. It's the plumbing everything else rides on.</p>
+    <div class="demo">
+      <div class="label">Live: one signal source → many backends</div>
+      <canvas id="otelCanvas" height="180"></canvas>
+    </div>
+  </section>
+
+  <!-- 3 tracing -->
+  <section class="card" id="s3">
+    <h2><span class="num">3</span> Tracing</h2>
+    <p class="lead">Follow one request end-to-end.</p>
+    <p>A trace breaks a single request into timed <strong>spans</strong> across every component. For a RAG request, the waterfall shows exactly where the time went — and where a failure happened.</p>
+    <div class="demo">
+      <div class="label">Live: a RAG request's span waterfall</div>
+      <div id="traceRows"></div>
+      <div class="controls"><button onclick="traceRun()">Trace a request →</button><button class="ghost" onclick="traceReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 4 metrics -->
+  <section class="card" id="s4">
+    <h2><span class="num">4</span> Metrics</h2>
+    <p class="lead">Aggregated numbers for the whole fleet.</p>
+    <p>Traces tell you about <em>one</em> request; <strong>metrics</strong> tell you about <em>all</em> of them — request rate, error rate, p95 latency — cheap to store and perfect for dashboards and alerts.</p>
+    <div class="demo">
+      <div class="label">Live: a mini metrics dashboard</div>
+      <canvas id="metricsCanvas" height="150"></canvas>
+      <div class="controls"><button onclick="metricsToggle()" id="metricsBtn">Start live feed ▶</button></div>
+    </div>
+  </section>
+
+  <!-- 5 token usage -->
+  <section class="card" id="s5">
+    <h2><span class="num">5</span> Token Usage</h2>
+    <p class="lead">The fundamental unit — everything else is built on it.</p>
+    <p>Every request has an <span class="hl">input</span> and <span class="hl">output</span> token count. Tokens drive cost, latency, and rate limits, so you track them per request, per user, per model.</p>
+    <div class="demo">
+      <div class="label">Live: tokens accumulate per request</div>
+      <canvas id="tokCanvas" height="150"></canvas>
+      <div class="controls"><button onclick="tokReq()">Send a request →</button><button class="ghost" onclick="tokReset()">Reset</button></div>
+      <div id="tokTotal" style="margin-top:10px;font-size:14px;color:var(--muted);"></div>
+    </div>
+  </section>
+
+  <!-- 6 TTFT vs TPS -->
+  <section class="card" id="s6">
+    <h2><span class="num">6</span> TTFT vs TPS <span style="font-size:13px;color:var(--pink);font-weight:700">★ the key idea</span></h2>
+    <p class="lead">Because responses stream, "latency" is two different numbers.</p>
+    <p><strong>TTFT</strong> (Time To First Token) = how long before it <em>starts</em> talking — perceived responsiveness, the <span class="hl">UX metric</span>. <strong>TPS</strong> (Tokens Per Second) = how fast it talks <em>after</em> that — throughput, the <span class="hl">speed metric</span>. A model can be great at one and poor at the other.</p>
+    <div class="demo">
+      <div class="label">Live: compare two models streaming the same answer</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px;">Model A — slow TTFT, fast TPS</div><div id="modelA" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px;min-height:80px;font-size:13px;"></div><div id="statA" style="font-size:12px;color:var(--muted);margin-top:4px;"></div></div>
+        <div><div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px;">Model B — fast TTFT, slow TPS</div><div id="modelB" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:10px;min-height:80px;font-size:13px;"></div><div id="statB" style="font-size:12px;color:var(--muted);margin-top:4px;"></div></div>
+      </div>
+      <div class="controls"><button onclick="ttftRace()">Stream both →</button></div>
+    </div>
+    <div class="note f5"><b>Take this to a call:</b> knowing "latency" = TTFT (UX) + TPS (throughput) is the metric that shows you understand LLM serving, not just web serving.</div>
+  </section>
+
+  <!-- 7 cost -->
+  <section class="card" id="s7">
+    <h2><span class="num">7</span> Cost Monitoring</h2>
+    <p class="lead">FinOps for AI — tokens × price = money.</p>
+    <p>Spend varies wildly by model and request, so you track it <span class="hl">per user, team, feature, and model</span> — for chargeback, budget alerts, and catching a runaway agent burning tokens.</p>
+    <div class="demo">
+      <div class="label">Live: watch spend accrue against a budget</div>
+      <div id="costRows"></div>
+      <div style="margin-top:12px;height:24px;background:#0d1117;border:1px solid var(--border);border-radius:8px;overflow:hidden;"><div id="costBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--yellow));transition:.4s;"></div></div>
+      <div class="controls"><button onclick="costReq('cheap')">Cheap request</button><button onclick="costReq('expensive')">Expensive request</button><button class="ghost" onclick="costReset()">Reset</button></div>
+      <div id="costStatus" style="margin-top:10px;font-size:14px;min-height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- 8 prompt logs -->
+  <section class="card" id="s8">
+    <h2><span class="num">8</span> Prompt Logs & Privacy</h2>
+    <p class="lead">The data you need to debug is the data you must protect.</p>
+    <p>Logging prompts and responses is essential for debugging, audit, and building eval sets. But those logs contain <span class="hl">PII and secrets</span> (Section 7) — so observability and security collide: logs must be access-controlled and often redacted before storage.</p>
+    <div class="demo">
+      <div class="label">Live: a logged prompt, before & after redaction</div>
+      <div style="font-size:12px;color:var(--pink);font-weight:700;margin-bottom:4px;">RAW (never store this)</div>
+      <pre id="logRaw"></pre>
+      <div class="controls"><button onclick="logRedact()">Redact for storage →</button><button class="ghost" onclick="logReset()">Reset</button></div>
+      <pre id="logSafe" style="margin-top:12px;display:none;"></pre>
+    </div>
+  </section>
+
+  <!-- 9 eval -->
+  <section class="card" id="s9">
+    <h2><span class="num">9</span> Evaluation Metrics</h2>
+    <p class="lead">The hard part: measuring quality, not just speed.</p>
+    <p>There's no "HTTP 200" for <em>was the answer good?</em> So you measure proxies — <span class="hl">faithfulness, relevance, correctness, toxicity, hallucination rate</span> — often using <strong>LLM-as-a-judge</strong> (one model scoring another's output).</p>
+    <div class="demo">
+      <div class="label">Live: an LLM judge scores an answer</div>
+      <div style="font-size:14px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="color:var(--muted)">Answer under test:</div>
+        <div style="margin-top:4px;">"Enterprise refunds take 45 days and are processed to the original card."</div>
+      </div>
+      <div id="evalRows" style="margin-top:12px;"></div>
+      <div class="controls"><button onclick="evalRun()">Run the judge 🧑‍⚖️</button><button class="ghost" onclick="evalReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 10 tools -->
+  <section class="card" id="s10" style="background:linear-gradient(135deg,rgba(63,185,80,0.1),rgba(88,166,255,0.08));border:1px solid rgba(63,185,80,0.3);">
+    <h2><span class="num">🎯</span> The Tool Stack</h2>
+    <p class="lead">How the pieces fit — click one.</p>
+    <div class="demo">
+      <div class="label">Live: signals → storage → visualization</div>
+      <div id="toolGrid" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      <div id="toolDetail" style="margin-top:16px;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:16px;min-height:60px;color:var(--muted);">Click a tool above.</div>
+    </div>
+    <div class="note"><b>Two truths:</b> "latency" = TTFT (UX) + TPS (throughput) · and you can't manage what you can't measure — tokens/cost/quality are what generic APM misses. ✅</div>
+    <div class="note f5"><b>Your role:</b> the gateway already sees every request, token, model, and guardrail hit — so it's the natural collection point. "Route + secure + <b>observe</b>" is one control point.</div>
+  </section>
+
+  <footer>AI Observability — Interactive Explainer · Companion to <em>Learnings/AI Observability - Traces, Tokens, and Evals.md</em></footer>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.12});
+document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+function dpr(c,h){const d=devicePixelRatio||1;const w=c.clientWidth;c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);return{ctx:x,w,h};}
+
+/* 2 OTel */
+(function(){
+  const c=document.getElementById('otelCanvas');
+  function draw(){
+    const {ctx,w,h}=dpr(c,180);ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#161b22';ctx.strokeStyle='#3fb950';ctx.lineWidth=2.5;ctx.beginPath();ctx.roundRect(20,h/2-24,90,48,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#3fb950';ctx.font='700 13px sans-serif';ctx.textAlign='center';ctx.fillText('Your app',65,h/2-2);ctx.font='10px sans-serif';ctx.fillText('+ OTel SDK',65,h/2+14);
+    const backends=[['Prometheus','#ffa657'],['Tempo','#bc8cff'],['Langfuse','#58a6ff']];
+    backends.forEach((b,i)=>{
+      const y=40+i*50;
+      ctx.strokeStyle=b[1]+'99';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(110,h/2);ctx.lineTo(w-130,y);ctx.stroke();
+      ctx.fillStyle='#161b22';ctx.strokeStyle=b[1];ctx.beginPath();ctx.roundRect(w-125,y-16,105,32,8);ctx.fill();ctx.stroke();
+      ctx.fillStyle=b[1];ctx.font='12px sans-serif';ctx.fillText(b[0],w-72,y+4);
+    });
+    ctx.fillStyle='#9aa7b5';ctx.font='11px sans-serif';ctx.fillText('one standard → any backend',w/2,h-6);
+  }
+  draw();addEventListener('resize',draw);
+})();
+
+/* 3 tracing */
+const spans=[
+  {n:'gateway',ms:12,col:'#58a6ff',off:0},
+  {n:'embed query',ms:40,col:'#79c0ff',off:12},
+  {n:'vector search',ms:85,col:'#3fb950',off:52},
+  {n:'rerank',ms:60,col:'#f2cc60',off:137},
+  {n:'LLM call',ms:820,col:'#bc8cff',off:197},
+  {n:'guardrail',ms:25,col:'#ff7b9c',off:1017}
+];
+const TRACE_TOTAL=1050;
+let traceI=0;
+function traceRun(){
+  if(traceI>=spans.length){return;}
+  const s=spans[traceI];const box=document.getElementById('traceRows');
+  const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:10px;margin:5px 0;font-size:13px;';
+  row.innerHTML=`<div style="width:100px;text-align:right;color:var(--muted);font-family:ui-monospace,monospace">${s.n}</div>
+    <div style="flex:1;position:relative;height:22px;background:#0d1117;border:1px solid var(--border);border-radius:5px;">
+    <div style="position:absolute;left:${s.off/TRACE_TOTAL*100}%;width:0%;height:100%;background:${s.col};border-radius:4px;transition:width .5s;" class="spanbar"></div></div>
+    <div style="width:56px;font-family:ui-monospace,monospace;color:var(--yellow)">${s.ms}ms</div>`;
+  box.appendChild(row);requestAnimationFrame(()=>row.querySelector('.spanbar').style.width=(s.ms/TRACE_TOTAL*100)+'%');
+  traceI++;
+  if(traceI===spans.length){setTimeout(()=>{const d=document.createElement('div');d.style.cssText='margin-top:10px;font-size:13px;color:var(--purple)';d.innerHTML='→ Total ~1050ms. The <b>LLM call (820ms)</b> dominates — the trace shows exactly where the time went.';box.appendChild(d);},600);}
+}
+function traceReset(){traceI=0;document.getElementById('traceRows').innerHTML='';}
+
+/* 4 metrics */
+let metricsTimer=null,metricsData={rate:[],p95:[],err:[]};
+function metricsToggle(){
+  const btn=document.getElementById('metricsBtn');
+  if(metricsTimer){clearInterval(metricsTimer);metricsTimer=null;btn.textContent='Start live feed ▶';return;}
+  btn.textContent='Pause ⏸';
+  metricsTimer=setInterval(()=>{
+    metricsData.rate.push(40+Math.sin(metricsData.rate.length/3)*15+ (metricsData.rate.length%5));
+    metricsData.p95.push(800+Math.sin(metricsData.p95.length/4)*300);
+    metricsData.err.push(Math.max(0,2+Math.sin(metricsData.err.length/2)*2));
+    ['rate','p95','err'].forEach(k=>{if(metricsData[k].length>40)metricsData[k].shift();});
+    drawMetrics();
+  },200);
+}
+function drawMetrics(){
+  const c=document.getElementById('metricsCanvas');const {ctx,w,h}=dpr(c,150);ctx.clearRect(0,0,w,h);
+  const panels=[['req/s',metricsData.rate,'#3fb950',80],['p95 ms',metricsData.p95,'#f2cc60',1400],['err %',metricsData.err,'#f85149',6]];
+  const pw=w/3;
+  panels.forEach((p,i)=>{
+    const x0=i*pw;
+    ctx.fillStyle='#9aa7b5';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText(p[0],x0+10,16);
+    const data=p[1];if(data.length>1){ctx.strokeStyle=p[2];ctx.lineWidth=2;ctx.beginPath();data.forEach((v,j)=>{const x=x0+10+(pw-20)*(j/39);const y=h-15-(h-35)*(v/p[3]);j?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+      ctx.fillStyle=p[2];ctx.font='700 14px ui-monospace';ctx.fillText(Math.round(data[data.length-1]),x0+10,h-2);}
+    if(i)ctx.strokeStyle='rgba(120,140,170,.15)',ctx.beginPath(),ctx.moveTo(x0,10),ctx.lineTo(x0,h),ctx.stroke();
+  });
+}
+drawMetrics();
+
+/* 5 tokens */
+let tokReqs=[],tokIn=0,tokOut=0;
+function tokReq(){
+  const i=200+Math.floor(Math.abs(Math.sin(tokReqs.length*77))*800),o=100+Math.floor(Math.abs(Math.sin(tokReqs.length*33))*1200);
+  tokReqs.push({i,o});tokIn+=i;tokOut+=o;if(tokReqs.length>12)tokReqs.shift();
+  drawTok();document.getElementById('tokTotal').innerHTML=`Cumulative: <span class="val">${tokIn.toLocaleString()}</span> input + <span class="val">${tokOut.toLocaleString()}</span> output tokens`;
+}
+function drawTok(){
+  const c=document.getElementById('tokCanvas');const {ctx,w,h}=dpr(c,150);ctx.clearRect(0,0,w,h);
+  const max=Math.max(1600,...tokReqs.map(r=>r.i+r.o));const bw=(w-20)/12-4;
+  tokReqs.forEach((r,j)=>{
+    const x=10+j*((w-20)/12);
+    const ih=(h-24)*(r.i/max),oh=(h-24)*(r.o/max);
+    ctx.fillStyle='#58a6ff';ctx.fillRect(x,h-20-ih,bw,ih);
+    ctx.fillStyle='#bc8cff';ctx.fillRect(x,h-20-ih-oh,bw,oh);
+  });
+  ctx.fillStyle='#58a6ff';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('■ input',10,h-4);
+  ctx.fillStyle='#bc8cff';ctx.fillText('■ output',70,h-4);
+}
+function tokReset(){tokReqs=[];tokIn=0;tokOut=0;drawTok();document.getElementById('tokTotal').textContent='';}
+drawTok();
+
+/* 6 TTFT vs TPS */
+function ttftRace(){
+  const words='The refund window is forty five days.'.split(' ');
+  const A=document.getElementById('modelA'),B=document.getElementById('modelB');
+  A.innerHTML='';B.innerHTML='';document.getElementById('statA').textContent='';document.getElementById('statB').textContent='';
+  // Model A: long TTFT (700ms) then fast TPS (120ms/word)
+  A.innerHTML='<span style="color:var(--muted)">…thinking…</span>';
+  setTimeout(()=>{A.innerHTML='';let i=0;const t=setInterval(()=>{A.innerHTML+=(i?' ':'')+words[i];i++;if(i>=words.length){clearInterval(t);document.getElementById('statA').innerHTML='TTFT <b style="color:var(--red)">700ms</b> · TPS <b style="color:var(--green)">fast</b>';}},120);},700);
+  // Model B: short TTFT (150ms) then slow TPS (330ms/word)
+  B.innerHTML='<span style="color:var(--muted)">…</span>';
+  setTimeout(()=>{B.innerHTML='';let i=0;const t=setInterval(()=>{B.innerHTML+=(i?' ':'')+words[i];i++;if(i>=words.length){clearInterval(t);document.getElementById('statB').innerHTML='TTFT <b style="color:var(--green)">150ms</b> · TPS <b style="color:var(--red)">slow</b>';}},330);},150);
+}
+
+/* 7 cost */
+let costUsed=0;const COST_BUDGET=1.0;let costLog={};
+function costReq(kind){
+  const c=kind==='cheap'?0.002:0.08;const model=kind==='cheap'?'small':'big';
+  costUsed+=c;costLog[model]=(costLog[model]||0)+c;
+  document.getElementById('costBar').style.width=Math.min(100,costUsed/COST_BUDGET*100)+'%';
+  const rows=document.getElementById('costRows');
+  rows.innerHTML=Object.entries(costLog).map(([m,v])=>`<div style="display:flex;justify-content:space-between;font-size:14px;margin:3px 0;"><span>${m} model</span><span class="val">$${v.toFixed(3)}</span></div>`).join('');
+  const st=document.getElementById('costStatus');
+  if(costUsed>=COST_BUDGET){document.getElementById('costBar').style.background='linear-gradient(90deg,var(--yellow),var(--red))';st.innerHTML='<span style="color:var(--red)">🚨 Budget alert! $'+costUsed.toFixed(3)+' / $1.00 — a runaway would trip this.</span>';}
+  else st.innerHTML=`<span style="color:var(--green)">$${costUsed.toFixed(3)} / $1.00 spent</span>`;
+}
+function costReset(){costUsed=0;costLog={};document.getElementById('costBar').style.width='0%';document.getElementById('costBar').style.background='linear-gradient(90deg,var(--green),var(--yellow))';document.getElementById('costRows').innerHTML='';document.getElementById('costStatus').textContent='';}
+
+/* 8 prompt logs */
+function renderLogRaw(){document.getElementById('logRaw').innerHTML='user: "I\'m Jane Tan (jane.tan@acme.com). Reset my account,\nmy token is sk-live-8842xyz."';}
+renderLogRaw();
+function logRedact(){
+  const s=document.getElementById('logSafe');s.style.display='block';
+  s.innerHTML='user: "I\'m <span style="background:var(--pink);color:#000;border-radius:3px;padding:0 3px">[NAME]</span> (<span style="background:var(--pink);color:#000;border-radius:3px;padding:0 3px">[EMAIL]</span>). Reset my account,\nmy token is <span style="background:var(--red);color:#fff;border-radius:3px;padding:0 3px">[SECRET]</span>."\n\n<span style="color:var(--green)">✓ Safe to store — PII & secret stripped before it hits the log.</span>';
+}
+function logReset(){document.getElementById('logSafe').style.display='none';}
+
+/* 9 eval */
+const evals=[{n:'Faithfulness',score:0.95,good:true,why:'matches retrieved context'},{n:'Relevance',score:0.92,good:true,why:'answers the question'},{n:'Toxicity',score:0.01,good:true,why:'clean'},{n:'Hallucination',score:0.04,good:true,why:'no invented facts'}];
+function evalRun(){
+  const box=document.getElementById('evalRows');box.innerHTML='';
+  evals.forEach((e,i)=>{
+    const row=document.createElement('div');row.style.cssText=`display:flex;align-items:center;gap:10px;margin:5px 0;font-size:14px;opacity:0;transition:.3s ${i*0.2}s;`;
+    const pct=e.n==='Toxicity'||e.n==='Hallucination'?(1-e.score):e.score;
+    row.innerHTML=`<div style="width:110px;">${e.n}</div><div style="flex:1;background:#0d1117;border:1px solid var(--border);border-radius:5px;height:18px;overflow:hidden;"><div style="width:${pct*100}%;height:100%;background:${e.good?'var(--green)':'var(--red)'}"></div></div><div style="width:44px;font-family:ui-monospace;color:${e.good?'var(--green)':'var(--red)'}">${e.score.toFixed(2)}</div><div style="width:150px;font-size:12px;color:var(--muted)">${e.why}</div>`;
+    box.appendChild(row);requestAnimationFrame(()=>row.style.opacity=1);
+  });
+  setTimeout(()=>{const d=document.createElement('div');d.style.cssText='margin-top:8px;font-size:13px;color:var(--purple)';d.innerHTML='→ The judge model scored the answer — no "HTTP 200 for good," so quality becomes measurable numbers.';box.appendChild(d);},900);
+}
+function evalReset(){document.getElementById('evalRows').innerHTML='';}
+
+/* 10 tools */
+const tools=[
+  {n:'OpenTelemetry',cat:'standard',d:'The vendor-neutral standard that emits traces/metrics/logs. Everything else consumes what it produces.'},
+  {n:'Prometheus',cat:'store',d:'Metrics database + alerting. The de-facto standard for the infra-metrics side.'},
+  {n:'Tempo',cat:'store',d:'Grafana\'s distributed tracing backend — stores and queries the span waterfalls.'},
+  {n:'Grafana',cat:'viz',d:'The dashboard / visualization layer over Prometheus, Tempo, and more — the single pane of glass.'},
+  {n:'Langfuse',cat:'llm',d:'Open-source LLM engineering platform: tracing, prompt logs, evals, cost. Self-hostable.'},
+  {n:'OpenLIT',cat:'llm',d:'Open-source, OpenTelemetry-native LLM observability with one-line auto-instrumentation.'},
+  {n:'Arize Phoenix',cat:'llm',d:'Open-source LLM tracing with a strong focus on evaluation and experimentation.'}
+];
+(function(){
+  const grid=document.getElementById('toolGrid');
+  const catCol={standard:'var(--green)',store:'var(--orange)',viz:'var(--accent)',llm:'var(--purple)'};
+  const catLbl={standard:'standard',store:'storage',viz:'visualize',llm:'LLM-native'};
+  tools.forEach(t=>{
+    const b=document.createElement('button');b.className='ghost';b.style.cssText='padding:8px 12px;';
+    b.innerHTML=`${t.n} <span style="color:${catCol[t.cat]};font-size:11px;">${catLbl[t.cat]}</span>`;
+    b.onclick=()=>{document.getElementById('toolDetail').innerHTML=`<b style="color:${catCol[t.cat]}">${t.n}</b> <span style="color:var(--muted);font-size:12px">· ${catLbl[t.cat]}</span><br><span style="color:var(--text)">${t.d}</span>`;};
+    grid.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
