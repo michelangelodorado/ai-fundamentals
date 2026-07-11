@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Networking — Interactive Explainer</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2431;--border:#2d3644;--text:#e6edf3;--muted:#9aa7b5;--accent:#58a6ff;--accent-2:#79c0ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--pink:#ff7b9c;--yellow:#f2cc60;--red:#f85149;--radius:14px;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%,#16202e 0%,var(--bg) 55%) fixed;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 120px;}
+  .backlink{display:inline-block;margin:26px 0 0;color:var(--accent-2);text-decoration:none;font-size:14px;}
+  .backlink:hover{text-decoration:underline;}
+  header.hero{text-align:center;padding:30px 20px 40px;}
+  header.hero .kicker{text-transform:uppercase;letter-spacing:3px;font-size:12px;color:var(--accent);font-weight:700;}
+  header.hero h1{font-size:clamp(32px,6vw,52px);margin:12px 0 10px;background:linear-gradient(90deg,#79c0ff,#bc8cff,#ff7b9c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+  header.hero p{color:var(--muted);font-size:18px;max-width:640px;margin:0 auto;}
+  .goal-badge{display:inline-block;margin-top:22px;background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.35);color:var(--accent-2);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;}
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--purple));z-index:100;transition:width .1s linear;}
+  nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:20px 0 50px;}
+  nav.toc h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:30px;}
+  nav.toc li{margin:5px 0;} nav.toc a{color:var(--accent-2);text-decoration:none;} nav.toc a:hover{text-decoration:underline;}
+  section.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:26px 0;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+  section.card.visible{opacity:1;transform:none;}
+  section.card h2{margin:0 0 6px;font-size:26px;display:flex;align-items:center;gap:12px;}
+  section.card h2 .num{font-size:14px;font-weight:700;background:var(--panel-2);border:1px solid var(--border);color:var(--accent);min-width:34px;height:34px;padding:0 8px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .lead{color:var(--muted);margin:0 0 18px;}
+  p{margin:12px 0;} strong{color:#fff;}
+  .hl{color:var(--accent-2);font-weight:600;} .tag{color:var(--purple);font-weight:600;}
+  .demo{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:20px 0;}
+  .demo .label{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .demo .label::before{content:"▶";color:var(--green);font-size:10px;}
+  button,.btn{background:var(--accent);color:#06131f;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;transition:transform .1s,filter .15s;}
+  button:hover{filter:brightness(1.1);} button:active{transform:scale(.96);}
+  button.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
+  input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  canvas{display:block;width:100%;border-radius:10px;}
+  .val{font-family:ui-monospace,monospace;background:#0d1117;border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--yellow);}
+  .note{border-left:3px solid var(--accent);background:rgba(88,166,255,0.07);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:15px;}
+  .note.f5{border-left-color:var(--pink);background:rgba(255,123,156,0.07);}
+  .note b{color:var(--accent-2);} .note.f5 b{color:var(--pink);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);} th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;} td strong{color:var(--accent-2);}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .seg button{background:transparent;color:var(--muted);border:none;border-radius:0;padding:8px 14px;}
+  .seg button.on{background:var(--accent);color:#06131f;}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;}
+  @media (max-width:600px){nav.toc ol{columns:1;}section.card{padding:22px;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+  <a href="index.html" class="backlink">← Back to all sections</a>
+  <header class="hero">
+    <div class="kicker">Section 5</div>
+    <h1>AI Networking</h1>
+    <p>Reverse proxies, load balancing, and gateways — applied to LLM traffic. Why an AI gateway has to understand tokens, caches, and GPUs.</p>
+    <div class="goal-badge">🎯 Goal: why LLM traffic breaks classic load balancing</div>
+  </header>
+
+  <nav class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><a href="#s1">Reverse Proxy → Gateways</a></li>
+      <li><a href="#s2">Why LLM Traffic Is Different</a></li>
+      <li><a href="#s3">Load Balancing for LLMs</a></li>
+      <li><a href="#s4">Model Routing</a></li>
+      <li><a href="#s5">Streaming, SSE & Buffering</a></li>
+      <li><a href="#s6">Transport: HTTP/2, gRPC, WS</a></li>
+      <li><a href="#s7">KV Cache-Aware Routing</a></li>
+      <li><a href="#s8">GPU-Aware Routing & Affinity</a></li>
+      <li><a href="#s9">Rate Limiting & Retries</a></li>
+      <li><a href="#s10">AI Traffic Management</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 reverse proxy -> gateways -->
+  <section class="card" id="s1">
+    <h2><span class="num">1</span> Reverse Proxy → Gateways</h2>
+    <p class="lead">Every "gateway" is a specialized reverse proxy. Start from what you know.</p>
+    <p>A <strong>reverse proxy</strong> sits in front of backends: one entry point, TLS termination, load balancing, a security choke point. An <strong>API gateway</strong> adds API smarts (auth, rate limits). An <strong>AI gateway</strong> adds LLM smarts (tokens, guardrails, model routing). An <strong>MCP gateway</strong> governs agent↔tool traffic.</p>
+    <div class="demo">
+      <div class="label">Live: peel back the layers of specialization</div>
+      <canvas id="gwCanvas" height="200"></canvas>
+      <div class="controls">
+        <div class="seg" id="gwSeg">
+          <button class="on" onclick="setGw(0,this)">Reverse proxy</button>
+          <button onclick="setGw(1,this)">API GW</button>
+          <button onclick="setGw(2,this)">AI GW</button>
+          <button onclick="setGw(3,this)">MCP GW</button>
+        </div>
+      </div>
+      <div id="gwDesc" style="margin-top:10px;font-size:14px;color:var(--muted);"></div>
+    </div>
+    <div class="note f5"><b>Your home turf:</b> this is the concept ADCs have owned for 20 years. AI just adds new backends and new routing logic on top of the same reverse-proxy foundation.</div>
+  </section>
+
+  <!-- 2 why different -->
+  <section class="card" id="s2">
+    <h2><span class="num">2</span> Why LLM Traffic Is Different <span style="font-size:13px;color:var(--pink);font-weight:700">★ the aha</span></h2>
+    <p class="lead">Classic load balancing assumes short, uniform, stateless requests. LLMs are the opposite.</p>
+    <p>Every "advanced" idea later in this section exists because of this mismatch.</p>
+    <table>
+      <tr><th>Property</th><th>Web request</th><th>LLM request</th></tr>
+      <tr><td>Duration</td><td>~milliseconds</td><td><strong>seconds–minutes</strong></td></tr>
+      <tr><td>Response</td><td>all at once</td><td><strong>streamed token-by-token</strong></td></tr>
+      <tr><td>Cost</td><td>~uniform</td><td><strong>wildly variable (tokens)</strong></td></tr>
+      <tr><td>Backend state</td><td>stateless</td><td><strong>KV cache matters</strong></td></tr>
+      <tr><td>Backend</td><td>cheap, identical</td><td><strong>costly GPUs, maybe diff. models</strong></td></tr>
+    </table>
+  </section>
+
+  <!-- 3 LB for LLMs -->
+  <section class="card" id="s3">
+    <h2><span class="num">3</span> Load Balancing for LLMs</h2>
+    <p class="lead">Round-robin is great for web servers — and bad for LLMs.</p>
+    <p>Round-robin ignores that one request is 10 tokens and another is 10,000. <span class="hl">Token-aware</span> balancing routes by the <em>work</em>, keeping GPUs evenly loaded.</p>
+    <div class="demo">
+      <div class="label">Live: same requests, two balancers</div>
+      <div class="controls" style="margin-top:0;">
+        <div class="seg" id="lbSeg">
+          <button class="on" onclick="setLb('rr',this)">Round-robin</button>
+          <button onclick="setLb('token',this)">Token-aware</button>
+        </div>
+      </div>
+      <canvas id="lbCanvas" height="200" style="margin-top:16px;"></canvas>
+      <div class="controls"><button onclick="lbSend()">Send a mix of requests →</button><button class="ghost" onclick="lbReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 4 model routing -->
+  <section class="card" id="s4">
+    <h2><span class="num">4</span> Model Routing</h2>
+    <p class="lead">Send each request to the right model — cheap for easy, smart for hard.</p>
+    <p>A gateway can classify each request and route it: a small fast model for "what's 2+2", a big expensive one for a hard reasoning task. This one decision directly controls <span class="hl">cost and quality</span>.</p>
+    <div class="demo">
+      <div class="label">Live: route by difficulty, watch the cost</div>
+      <div id="mrFlow" style="min-height:40px;font-size:15px;"></div>
+      <div class="controls"><button onclick="mrSend()">Next request →</button><button class="ghost" onclick="mrReset()">Reset</button></div>
+      <div style="margin-top:12px;font-size:14px;">Total cost so far: <span class="val" id="mrCost">$0.000</span> <span style="color:var(--muted)">— vs <span id="mrNaive">$0.000</span> if everything went to the big model</span></div>
+    </div>
+  </section>
+
+  <!-- 5 streaming -->
+  <section class="card" id="s5">
+    <h2><span class="num">5</span> Streaming, SSE & Buffering</h2>
+    <p class="lead">Why the gateway must never hold the whole response.</p>
+    <p>LLMs generate token-by-token, so output is <strong>streamed</strong> as it's produced (that "typing" effect), usually over <strong>SSE</strong> (Server-Sent Events, one-way server→client). If a gateway <span class="hl">buffers</span> the full response before forwarding, the user stares at a blank screen the whole time.</p>
+    <div class="demo">
+      <div class="label">Live: buffered vs streamed, side by side</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div><div style="font-size:12px;color:var(--pink);font-weight:700;margin-bottom:6px;">BUFFERED (bad)</div><div id="bufOut" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px;font-size:14px;"></div></div>
+        <div><div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px;">STREAMED (good)</div><div id="strOut" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px;font-size:14px;"></div></div>
+      </div>
+      <div class="controls"><button onclick="streamDemo()">Generate a response →</button></div>
+    </div>
+  </section>
+
+  <!-- 6 transport -->
+  <section class="card" id="s6">
+    <h2><span class="num">6</span> Transport: HTTP/2, gRPC, WebSockets</h2>
+    <p class="lead">The protocols under the hood.</p>
+    <p><strong>SSE</strong> rides on <strong>HTTP/2</strong>, which multiplexes many streams over one connection. <strong>gRPC</strong> (binary, fast) is used for internal service-to-service calls. <strong>WebSockets</strong> add full two-way communication for interactive cases.</p>
+    <div class="demo">
+      <div class="label">Live: click a protocol</div>
+      <div class="controls" style="margin-top:0;">
+        <div class="seg" id="protoSeg">
+          <button class="on" onclick="setProto(0,this)">SSE</button>
+          <button onclick="setProto(1,this)">HTTP/2</button>
+          <button onclick="setProto(2,this)">gRPC</button>
+          <button onclick="setProto(3,this)">WebSocket</button>
+        </div>
+      </div>
+      <canvas id="protoCanvas" height="150" style="margin-top:16px;"></canvas>
+      <div id="protoDesc" style="margin-top:8px;font-size:14px;color:var(--muted);"></div>
+    </div>
+  </section>
+
+  <!-- 7 KV cache-aware -->
+  <section class="card" id="s7">
+    <h2><span class="num">7</span> KV Cache-Aware Routing <span style="font-size:13px;color:var(--pink);font-weight:700">★ the clever one</span></h2>
+    <p class="lead">The routing decision a normal load balancer simply cannot make.</p>
+    <p>A conversation's <strong>KV cache</strong> (Section 2) lives on a <span class="hl">specific GPU</span>. Route the follow-up turn to that <em>same</em> GPU and the cache is still warm — instant. Send it elsewhere and the backend must recompute the whole history. Only a gateway that understands LLM internals can do this.</p>
+    <div class="demo">
+      <div class="label">Live: send a follow-up turn — smart vs blind</div>
+      <canvas id="kvCanvas" height="200"></canvas>
+      <div class="controls">
+        <button onclick="kvRoute(true)">Route follow-up (cache-aware) 🧠</button>
+        <button class="ghost" onclick="kvRoute(false)">Route blindly (round-robin)</button>
+        <button class="ghost" onclick="kvReset()">Reset</button>
+      </div>
+      <div id="kvResult" style="margin-top:10px;font-size:14px;min-height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- 8 GPU-aware -->
+  <section class="card" id="s8">
+    <h2><span class="num">8</span> GPU-Aware Routing & Model Affinity</h2>
+    <p class="lead">Route on real hardware telemetry, not blind rotation.</p>
+    <p><strong>GPU-aware routing</strong> reads live VRAM headroom, utilization, and queue depth (Section 4) and sends work where the hardware can take it. <strong>Model affinity</strong> keeps requests on backends that already have the needed model loaded — avoiding a costly swap in and out of VRAM.</p>
+    <div class="demo">
+      <div class="label">Live: route by live GPU telemetry</div>
+      <canvas id="gpuCanvas" height="200"></canvas>
+      <div class="controls"><button onclick="gpuRoute()">Route next request →</button><button class="ghost" onclick="gpuReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 9 rate limiting + retries -->
+  <section class="card" id="s9">
+    <h2><span class="num">9</span> Rate Limiting & Retries</h2>
+    <p class="lead">Count tokens, not requests. Retry smartly, not blindly.</p>
+    <p><strong>Rate limiting</strong> for LLMs is measured in <span class="hl">tokens per minute</span> (and cost per tenant) — one request can consume 100× another, so requests/sec is meaningless. <strong>Retries</strong> need backoff and failover to another model/provider, without triggering a retry storm.</p>
+    <div class="demo">
+      <div class="label">Live: token-bucket rate limit</div>
+      <div style="font-size:14px;margin-bottom:8px;">Budget: <span class="val" id="rlBudget">10,000</span> tokens/min</div>
+      <div style="height:26px;background:#0d1117;border:1px solid var(--border);border-radius:8px;overflow:hidden;"><div id="rlBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--yellow));transition:.4s;"></div></div>
+      <div class="controls">
+        <button onclick="rlReq(500)">Small request (500 tok)</button>
+        <button onclick="rlReq(4000)">Big request (4,000 tok)</button>
+        <button class="ghost" onclick="rlReset()">Reset</button>
+      </div>
+      <div id="rlStatus" style="margin-top:10px;font-size:14px;min-height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- 10 umbrella -->
+  <section class="card" id="s10" style="background:linear-gradient(135deg,rgba(188,140,255,0.1),rgba(88,166,255,0.08));border:1px solid rgba(188,140,255,0.3);">
+    <h2><span class="num">🎯</span> AI Traffic Management</h2>
+    <p class="lead">All of it together — the umbrella, and the whole point.</p>
+    <p>An <strong>AI-aware control plane</strong> that understands tokens, KV caches, GPUs, models, and streams — routing, protecting, and optimizing AI traffic end to end. It's a direct evolution of what an ADC already does for web and app traffic.</p>
+    <div class="demo">
+      <div class="label">The one-liner, visualized</div>
+      <div style="text-align:center;font-size:17px;line-height:2;">
+        <div>An <b style="color:var(--accent-2)">AI gateway</b> is a <b>reverse proxy</b></div>
+        <div style="color:var(--muted)">that understands what's happening <em>inside</em> the LLM —</div>
+        <div><span class="tag">tokens</span> · <span class="tag">KV cache</span> · <span class="tag">GPUs</span> · <span class="tag">models</span> · <span class="tag">streams</span></div>
+        <div style="color:var(--muted)">— and routes accordingly.</div>
+      </div>
+    </div>
+    <div class="note"><b>Test yourself:</b> can you name three routing decisions a normal load balancer can't make, and why? Then you've hit the goal. ✅</div>
+  </section>
+
+  <footer>AI Networking — Interactive Explainer · Companion to <em>Learnings/AI Networking - Gateways and Traffic Management.md</em></footer>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.12});
+document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+function dpr(c,h){const d=devicePixelRatio||1;const w=c.clientWidth;c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);return{ctx:x,w,h};}
+
+/* 1 gateways */
+let gwLevel=0;
+const gwInfo=[
+  {d:'Bare reverse proxy: one entry point, TLS, load balancing, security choke point.',feat:[]},
+  {d:'API gateway adds: authentication, rate limiting, request validation, versioning.',feat:['auth','rate limit','validate']},
+  {d:'AI gateway adds: token limits, model routing, prompt/response guardrails, semantic cache.',feat:['tokens','model routing','guardrails','sem-cache']},
+  {d:'MCP gateway adds: governs which tools an agent may reach, tool auth & policy.',feat:['tool policy','tool auth']}
+];
+function setGw(l,btn){gwLevel=l;document.querySelectorAll('#gwSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');drawGw();document.getElementById('gwDesc').textContent=gwInfo[l].d;}
+function drawGw(){
+  const c=document.getElementById('gwCanvas');const {ctx,w,h}=dpr(c,200);ctx.clearRect(0,0,w,h);
+  // client - gateway - backends
+  ctx.fillStyle='#58a6ff';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='#161b22';ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,80,54,40,8);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#58a6ff';ctx.fillText('client',41,104);
+  // gateway box grows with level
+  const cols=['#79c0ff','#58a6ff','#bc8cff','#ff7b9c'][gwLevel];
+  ctx.fillStyle='#161b22';ctx.strokeStyle=cols;ctx.lineWidth=2.5;ctx.beginPath();ctx.roundRect(w/2-55,50,110,100,10);ctx.fill();ctx.stroke();
+  ctx.fillStyle=cols;ctx.font='700 13px sans-serif';ctx.fillText(['Reverse proxy','API gateway','AI gateway','MCP gateway'][gwLevel],w/2,44);
+  const feats=gwInfo[gwLevel].feat;
+  ctx.font='10px ui-monospace,monospace';
+  feats.forEach((f,i)=>{ctx.fillStyle=cols+'cc';ctx.fillText('✓ '+f,w/2,74+i*17);});
+  if(!feats.length){ctx.fillStyle='#9aa7b5';ctx.fillText('(pass-through)',w/2,100);}
+  // backends
+  for(let i=0;i<3;i++){const y=50+i*38;ctx.fillStyle='#161b22';ctx.strokeStyle='#3fb950';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(w-70,y,54,30,7);ctx.fill();ctx.stroke();ctx.fillStyle='#3fb950';ctx.font='10px sans-serif';ctx.fillText(gwLevel>=2?'GPU '+(i+1):'srv '+(i+1),w-43,y+19);}
+  // arrows
+  ctx.strokeStyle='rgba(150,160,180,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(68,100);ctx.lineTo(w/2-55,100);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(w/2+55,100);ctx.lineTo(w-70,100);ctx.stroke();
+}
+setGw(0,document.querySelector('#gwSeg button'));addEventListener('resize',drawGw);
+
+/* 3 load balancing */
+let lbMode='rr',lbGpus=[0,0,0],lbNext=0;
+function setLb(m,btn){lbMode=m;document.querySelectorAll('#lbSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');}
+function drawLb(){
+  const c=document.getElementById('lbCanvas');const {ctx,w,h}=dpr(c,200);ctx.clearRect(0,0,w,h);
+  const max=Math.max(1,...lbGpus,10);
+  lbGpus.forEach((load,i)=>{
+    const bw=(w-60)/3,x=20+i*(bw+10),bh=140;
+    ctx.fillStyle='#0d1117';ctx.strokeStyle='var(--border)';ctx.strokeStyle='#2d3644';ctx.strokeRect(x,20,bw,bh);
+    const fill=Math.min(1,load/12000)*bh;
+    const over=load>10000;
+    ctx.fillStyle=over?'rgba(248,81,73,.6)':'rgba(63,185,80,.55)';
+    ctx.fillRect(x,20+bh-fill,bw,fill);
+    ctx.fillStyle='#e6edf3';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('GPU '+(i+1),x+bw/2,175);
+    ctx.fillStyle=over?'#f85149':'#9aa7b5';ctx.font='10px ui-monospace,monospace';ctx.fillText(load.toLocaleString()+' tok',x+bw/2,190);
+  });
+}
+function lbSend(){
+  // a mix: some tiny, some huge
+  const batch=[300,8000,200,500,9000,400];
+  batch.forEach(tok=>{
+    let target;
+    if(lbMode==='rr'){target=lbNext%3;lbNext++;}
+    else{target=lbGpus.indexOf(Math.min(...lbGpus));} // least-loaded by tokens
+    lbGpus[target]+=tok;
+  });
+  drawLb();
+  const over=lbGpus.some(g=>g>10000);
+  if(lbMode==='rr'&&over)document.getElementById('lbCanvas').scrollIntoView({block:'nearest'});
+}
+function lbReset(){lbGpus=[0,0,0];lbNext=0;drawLb();}
+drawLb();addEventListener('resize',drawLb);
+
+/* 4 model routing */
+let mrCost=0,mrNaive=0,mrI=0;
+const mrReqs=[
+  {q:'What is 2+2?',hard:false},{q:'Summarize this word.',hard:false},
+  {q:'Prove this theorem step by step.',hard:true},{q:'Say hello.',hard:false},
+  {q:'Design a distributed system.',hard:true}
+];
+function mrSend(){
+  if(mrI>=mrReqs.length)return;const r=mrReqs[mrI];
+  const model=r.hard?'Big model ($0.030)':'Small model ($0.001)';
+  const col=r.hard?'var(--purple)':'var(--green)';
+  mrCost+=r.hard?0.030:0.001;mrNaive+=0.030;
+  const d=document.createElement('div');
+  d.style.cssText=`background:#0d1117;border:1px solid var(--border);border-left:3px solid ${col};border-radius:8px;padding:8px 12px;margin:5px 0;opacity:0;transition:.3s;`;
+  d.innerHTML=`<span style="color:var(--muted)">"${r.q}"</span> → <b style="color:${col}">${model}</b>`;
+  document.getElementById('mrFlow').appendChild(d);requestAnimationFrame(()=>d.style.opacity=1);
+  document.getElementById('mrCost').textContent='$'+mrCost.toFixed(3);
+  document.getElementById('mrNaive').textContent='$'+mrNaive.toFixed(3);
+  mrI++;
+}
+function mrReset(){mrCost=0;mrNaive=0;mrI=0;document.getElementById('mrFlow').innerHTML='';document.getElementById('mrCost').textContent='$0.000';document.getElementById('mrNaive').textContent='$0.000';}
+
+/* 5 streaming */
+function streamDemo(){
+  const words='Streaming shows each token the moment it is ready.'.split(' ');
+  const buf=document.getElementById('bufOut'),str=document.getElementById('strOut');
+  buf.innerHTML='<span style="color:var(--muted)">…waiting… (nothing shown yet)</span>';str.innerHTML='';
+  let i=0;
+  const timer=setInterval(()=>{
+    str.innerHTML+=(i>0?' ':'')+`<span style="color:var(--green)">${words[i]}</span>`;
+    i++;
+    if(i>=words.length){clearInterval(timer);
+      setTimeout(()=>{buf.innerHTML='<span style="color:var(--pink)">'+words.join(' ')+'</span><br><span style="font-size:12px;color:var(--muted)">(all at once, after a long wait)</span>';},300);
+    }
+  },260);
+}
+
+/* 6 transport */
+let proto=0;
+const protoInfo=[
+  {d:'SSE — one-way server→client stream. What most LLM chat APIs use for tokens.',dirn:'one'},
+  {d:'HTTP/2 — multiplexes many streams over a single connection. SSE rides on it.',dirn:'multi'},
+  {d:'gRPC — binary, high-performance RPC over HTTP/2. Internal gateway↔server calls.',dirn:'one'},
+  {d:'WebSocket — full-duplex, two-way persistent connection. Interactive / voice / agents.',dirn:'duplex'}
+];
+function setProto(p,btn){proto=p;document.querySelectorAll('#protoSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');document.getElementById('protoDesc').textContent=protoInfo[p].d;}
+(function(){
+  const c=document.getElementById('protoCanvas');let t=0;
+  function draw(){
+    const {ctx,w,h}=dpr(c,150);ctx.clearRect(0,0,w,h);t+=0.02;
+    const info=protoInfo[proto];
+    ctx.fillStyle='#161b22';ctx.strokeStyle='#58a6ff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(20,55,70,40,8);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.roundRect(w-90,55,70,40,8);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#58a6ff';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('client',55,79);ctx.fillText('server',w-55,79);
+    const streams=info.dirn==='multi'?3:1;
+    for(let s=0;s<streams;s++){
+      const y=75+(s-(streams-1)/2)*16;
+      ctx.strokeStyle='#2d3644';ctx.beginPath();ctx.moveTo(90,y);ctx.lineTo(w-90,y);ctx.stroke();
+      // packets server->client
+      const p=(t*1.0+s*0.33)%1;const x=w-90-(w-180)*p;
+      ctx.fillStyle='#3fb950';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+      if(info.dirn==='duplex'){const p2=(t*1.0+0.5)%1;const x2=90+(w-180)*p2;ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(x2,y,4,0,Math.PI*2);ctx.fill();}
+    }
+    ctx.fillStyle='#9aa7b5';ctx.font='11px sans-serif';
+    ctx.fillText(info.dirn==='duplex'?'⇄ both directions':info.dirn==='multi'?'⇉ many streams, one connection':'→ server to client',w/2,130);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+setProto(0,document.querySelector('#protoSeg button'));
+
+/* 7 KV cache-aware */
+let kvConvGpu=1; // conversation's cache lives on GPU 2 (index 1)
+function drawKv(highlight,routed){
+  const c=document.getElementById('kvCanvas');const {ctx,w,h}=dpr(c,200);ctx.clearRect(0,0,w,h);
+  for(let i=0;i<3;i++){
+    const bw=(w-60)/3,x=20+i*(bw+10);
+    const hasCache=i===kvConvGpu;
+    ctx.fillStyle='#161b22';ctx.strokeStyle=hasCache?'#f2cc60':'#2d3644';ctx.lineWidth=hasCache?2.5:1.5;
+    ctx.beginPath();ctx.roundRect(x,40,bw,110,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle=hasCache?'#f2cc60':'#9aa7b5';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText('GPU '+(i+1),x+bw/2,64);
+    if(hasCache){ctx.fillStyle='#f2cc60';ctx.font='11px sans-serif';ctx.fillText('🔥 warm KV cache',x+bw/2,92);ctx.fillText('for this convo',x+bw/2,106);}
+    else{ctx.fillStyle='#6b7684';ctx.font='11px sans-serif';ctx.fillText('cold',x+bw/2,96);}
+    if(routed===i){ctx.strokeStyle=highlight?'#3fb950':'#f85149';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-3,37,bw+6,116,12);ctx.stroke();
+      ctx.fillStyle=highlight?'#3fb950':'#f85149';ctx.font='700 22px sans-serif';ctx.fillText('▼',x+bw/2,32);}
+  }
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Follow-up turn in an existing conversation →',w/2,180);
+}
+function kvRoute(smart){
+  const target=smart?kvConvGpu:(kvConvGpu===0?1:0); // blind picks a different one
+  drawKv(smart,target);
+  const r=document.getElementById('kvResult');
+  if(smart)r.innerHTML='<span style="color:var(--green)">🧠 Routed to GPU '+(kvConvGpu+1)+' — cache warm, history reused. <b>~50ms, no recompute.</b></span>';
+  else r.innerHTML='<span style="color:var(--red)">🎲 Routed to a cold GPU — must recompute the whole conversation history. <b>~5,000ms + wasted GPU.</b></span>';
+}
+function kvReset(){drawKv(false,-1);document.getElementById('kvResult').textContent='';}
+drawKv(false,-1);addEventListener('resize',()=>drawKv(false,-1));
+
+/* 8 GPU-aware */
+let gpuState=[{vram:20,util:80},{vram:70,util:15},{vram:45,util:50}];
+function drawGpu(routed){
+  const c=document.getElementById('gpuCanvas');const {ctx,w,h}=dpr(c,200);ctx.clearRect(0,0,w,h);
+  gpuState.forEach((g,i)=>{
+    const bw=(w-60)/3,x=20+i*(bw+10);
+    const best=g.vram===Math.max(...gpuState.map(s=>s.vram));
+    ctx.fillStyle='#161b22';ctx.strokeStyle=routed===i?'#3fb950':'#2d3644';ctx.lineWidth=routed===i?3:1.5;
+    ctx.beginPath();ctx.roundRect(x,30,bw,140,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#e6edf3';ctx.font='700 12px sans-serif';ctx.textAlign='center';ctx.fillText('GPU '+(i+1),x+bw/2,52);
+    // vram free bar
+    ctx.fillStyle='#9aa7b5';ctx.font='10px sans-serif';ctx.fillText('VRAM free',x+bw/2,72);
+    ctx.fillStyle='#0d1117';ctx.fillRect(x+12,78,bw-24,14);ctx.fillStyle='#3fb950';ctx.fillRect(x+12,78,(bw-24)*g.vram/100,14);
+    ctx.fillStyle='#e6edf3';ctx.font='10px ui-monospace';ctx.fillText(g.vram+'%',x+bw/2,120);
+    // util bar
+    ctx.fillStyle='#9aa7b5';ctx.font='10px sans-serif';ctx.fillText('utilization',x+bw/2,110);
+    ctx.fillStyle='#0d1117';ctx.fillRect(x+12,124,bw-24,14);ctx.fillStyle='#ffa657';ctx.fillRect(x+12,124,(bw-24)*g.util/100,14);
+    ctx.fillStyle='#e6edf3';ctx.fillText(g.util+'%',x+bw/2,165);
+  });
+  ctx.fillStyle='#9aa7b5';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText(routed>=0?'→ routed to GPU '+(routed+1)+' (most VRAM free, lowest util)':'Click to route by live telemetry',w/2,190);
+}
+function gpuRoute(){
+  // pick best: max vram, low util
+  let best=0,score=-1;gpuState.forEach((g,i)=>{const s=g.vram-g.util;if(s>score){score=s;best=i;}});
+  drawGpu(best);
+  // simulate load shifting
+  gpuState[best].util=Math.min(95,gpuState[best].util+30);gpuState[best].vram=Math.max(5,gpuState[best].vram-25);
+}
+function gpuReset(){gpuState=[{vram:20,util:80},{vram:70,util:15},{vram:45,util:50}];drawGpu(-1);}
+drawGpu(-1);addEventListener('resize',()=>drawGpu(-1));
+
+/* 9 rate limiting */
+let rlUsed=0;const RL_BUDGET=10000;
+function rlReq(tok){
+  if(rlUsed+tok>RL_BUDGET){document.getElementById('rlStatus').innerHTML='<span style="color:var(--red)">🚫 Rejected — would exceed the token budget. (A request-count limit would have let this through!)</span>';return;}
+  rlUsed+=tok;document.getElementById('rlBar').style.width=(rlUsed/RL_BUDGET*100)+'%';
+  document.getElementById('rlStatus').innerHTML=`<span style="color:var(--green)">✓ Allowed — ${tok.toLocaleString()} tokens. ${(RL_BUDGET-rlUsed).toLocaleString()} left this minute.</span>`;
+  if(rlUsed>RL_BUDGET*0.8)document.getElementById('rlBar').style.background='linear-gradient(90deg,var(--yellow),var(--red))';
+}
+function rlReset(){rlUsed=0;document.getElementById('rlBar').style.width='0%';document.getElementById('rlBar').style.background='linear-gradient(90deg,var(--green),var(--yellow))';document.getElementById('rlStatus').textContent='';}
+</script>
+</body>
+</html>
