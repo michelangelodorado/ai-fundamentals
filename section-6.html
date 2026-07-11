@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG — Interactive Explainer</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel-2:#1c2431;--border:#2d3644;--text:#e6edf3;--muted:#9aa7b5;--accent:#58a6ff;--accent-2:#79c0ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--pink:#ff7b9c;--yellow:#f2cc60;--red:#f85149;--radius:14px;}
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%,#16202e 0%,var(--bg) 55%) fixed;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 120px;}
+  .backlink{display:inline-block;margin:26px 0 0;color:var(--accent-2);text-decoration:none;font-size:14px;}
+  .backlink:hover{text-decoration:underline;}
+  header.hero{text-align:center;padding:30px 20px 40px;}
+  header.hero .kicker{text-transform:uppercase;letter-spacing:3px;font-size:12px;color:var(--accent);font-weight:700;}
+  header.hero h1{font-size:clamp(32px,6vw,52px);margin:12px 0 10px;background:linear-gradient(90deg,#79c0ff,#bc8cff,#ff7b9c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;}
+  header.hero p{color:var(--muted);font-size:18px;max-width:640px;margin:0 auto;}
+  .goal-badge{display:inline-block;margin-top:22px;background:rgba(88,166,255,0.12);border:1px solid rgba(88,166,255,0.35);color:var(--accent-2);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;}
+  #progress{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--purple));z-index:100;transition:width .1s linear;}
+  nav.toc{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin:20px 0 50px;}
+  nav.toc h3{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:30px;}
+  nav.toc li{margin:5px 0;} nav.toc a{color:var(--accent-2);text-decoration:none;} nav.toc a:hover{text-decoration:underline;}
+  section.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:26px 0;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+  section.card.visible{opacity:1;transform:none;}
+  section.card h2{margin:0 0 6px;font-size:26px;display:flex;align-items:center;gap:12px;}
+  section.card h2 .num{font-size:14px;font-weight:700;background:var(--panel-2);border:1px solid var(--border);color:var(--accent);min-width:34px;height:34px;padding:0 8px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  .lead{color:var(--muted);margin:0 0 18px;}
+  p{margin:12px 0;} strong{color:#fff;}
+  .hl{color:var(--accent-2);font-weight:600;} .tag{color:var(--purple);font-weight:600;}
+  .demo{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:22px;margin:20px 0;}
+  .demo .label{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .demo .label::before{content:"▶";color:var(--green);font-size:10px;}
+  button,.btn{background:var(--accent);color:#06131f;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;transition:transform .1s,filter .15s;}
+  button:hover{filter:brightness(1.1);} button:active{transform:scale(.96);}
+  button.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
+  input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
+  input[type=text]{width:100%;background:#0d1117;border:1px solid var(--border);color:var(--text);padding:11px 14px;border-radius:8px;font-size:15px;font-family:inherit;}
+  input[type=text]:focus{outline:none;border-color:var(--accent);}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  canvas{display:block;width:100%;border-radius:10px;}
+  .val{font-family:ui-monospace,monospace;background:#0d1117;border:1px solid var(--border);padding:2px 8px;border-radius:6px;color:var(--yellow);}
+  .note{border-left:3px solid var(--accent);background:rgba(88,166,255,0.07);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:15px;}
+  .note.f5{border-left-color:var(--pink);background:rgba(255,123,156,0.07);}
+  .note b{color:var(--accent-2);} .note.f5 b{color:var(--pink);}
+  .chunk{display:inline-block;padding:6px 10px;margin:3px;border-radius:7px;font-size:13px;border:1px solid rgba(255,255,255,.12);}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .seg button{background:transparent;color:var(--muted);border:none;border-radius:0;padding:8px 14px;}
+  .seg button.on{background:var(--accent);color:#06131f;}
+  .resrow{display:flex;align-items:center;gap:10px;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:5px 0;font-size:14px;transition:.3s;}
+  footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px;}
+  @media (max-width:600px){nav.toc ol{columns:1;}section.card{padding:22px;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+  <a href="index.html" class="backlink">← Back to all sections</a>
+  <header class="hero">
+    <div class="kicker">Section 6</div>
+    <h1>Retrieval-Augmented Generation</h1>
+    <p>The most common enterprise AI architecture: give the model the right pages to read instead of relying on its memory.</p>
+    <div class="goal-badge">🎯 Goal: explain the end-to-end RAG pipeline</div>
+  </header>
+
+  <nav class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><a href="#s1">The Big Idea</a></li>
+      <li><a href="#s2">Chunking</a></li>
+      <li><a href="#s3">Embeddings & Vector Space</a></li>
+      <li><a href="#s4">Semantic vs Keyword</a></li>
+      <li><a href="#s5">Hybrid Search</a></li>
+      <li><a href="#s6">Metadata Filtering</a></li>
+      <li><a href="#s7">Retrieval & Reranking</a></li>
+      <li><a href="#s8">Context Injection</a></li>
+      <li><a href="#s9">Vector Databases</a></li>
+      <li><a href="#s10">The Full Pipeline</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 big idea -->
+  <section class="card" id="s1">
+    <h2><span class="num">1</span> The Big Idea</h2>
+    <p class="lead">RAG is an open-book exam for the LLM.</p>
+    <p>An LLM only knows its training data — not your private docs, nothing recent — and its context window is too small to paste in everything. <strong>RAG</strong> retrieves the few <span class="hl">relevant snippets</span> from your knowledge base and injects them into the prompt, so the model answers from them.</p>
+    <div class="demo">
+      <div class="label">Live: same question, without vs with RAG</div>
+      <p style="font-size:15px;">Q: <em>"What's our refund window for enterprise customers?"</em></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;">
+        <div style="background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:14px;"><div style="font-size:12px;color:var(--pink);font-weight:700;margin-bottom:6px;">WITHOUT RAG</div><div id="noRag" style="font-size:14px;">—</div></div>
+        <div style="background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:14px;"><div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px;">WITH RAG</div><div id="yesRag" style="font-size:14px;">—</div></div>
+      </div>
+      <div class="controls"><button onclick="bigIdea()">Ask both →</button></div>
+    </div>
+  </section>
+
+  <!-- 2 chunking -->
+  <section class="card" id="s2">
+    <h2><span class="num">2</span> Chunking <span style="font-size:13px;color:var(--pink);font-weight:700">★ #1 cause of bad RAG</span></h2>
+    <p class="lead">Documents are too big to embed or retrieve whole — so you split them.</p>
+    <p>Chunk <span class="hl">too big</span> → retrieval drags in lots of irrelevant text. Chunk <span class="hl">too small</span> → you lose the surrounding context. The sweet spot (with a little overlap) is where good RAG begins.</p>
+    <div class="demo">
+      <div class="label">Live: drag the chunk size</div>
+      <input type="range" id="chunkSlider" min="1" max="5" value="3">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px;"><span>tiny</span><span>just right</span><span>huge</span></div>
+      <div id="chunkOut" style="margin-top:16px;"></div>
+      <div id="chunkVerdict" style="margin-top:10px;font-size:14px;"></div>
+    </div>
+  </section>
+
+  <!-- 3 embeddings vector space -->
+  <section class="card" id="s3">
+    <h2><span class="num">3</span> Embeddings & Vector Space</h2>
+    <p class="lead">Each chunk becomes a point; nearby points mean similar things.</p>
+    <p>Every chunk is embedded into a <strong>vector</strong> (Section 1). To answer a question, you embed <em>the question too</em> and find the chunks whose points sit <span class="hl">closest</span> to it.</p>
+    <div class="demo">
+      <div class="label">Live: drop a query, watch the nearest chunks light up</div>
+      <canvas id="vecCanvas" height="300"></canvas>
+      <div class="controls">
+        <button onclick="dropQuery('billing')">Ask about billing →</button>
+        <button onclick="dropQuery('security')">Ask about security →</button>
+        <button onclick="dropQuery('onboarding')">Ask about onboarding →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 semantic vs keyword -->
+  <section class="card" id="s4">
+    <h2><span class="num">4</span> Semantic vs Keyword Search</h2>
+    <p class="lead">Meaning vs exact words — each catches what the other misses.</p>
+    <p><strong>Keyword</strong> search needs shared words. <strong>Semantic</strong> search matches meaning — so "reset my password" finds "credential recovery process" with zero words in common.</p>
+    <div class="demo">
+      <div class="label">Live: search "how do I reset my password?"</div>
+      <div id="skRows"></div>
+      <div class="controls">
+        <button onclick="skSearch('keyword')">Keyword search</button>
+        <button onclick="skSearch('semantic')">Semantic search</button>
+      </div>
+      <div id="skVerdict" style="margin-top:10px;font-size:14px;min-height:20px;"></div>
+    </div>
+  </section>
+
+  <!-- 5 hybrid -->
+  <section class="card" id="s5">
+    <h2><span class="num">5</span> Hybrid Search</h2>
+    <p class="lead">Best of both — and usually the winner for enterprise data.</p>
+    <p>Semantic search nails meaning but can fumble <span class="hl">exact terms</span> — error codes, product names, IDs. <strong>Hybrid</strong> runs both semantic and keyword search and merges the results. For data full of jargon and IDs, hybrid almost always beats pure vector.</p>
+    <div class="demo">
+      <div class="label">Live: query "the ERR-4021 timeout fix" — merge the two</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div><div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:6px;">SEMANTIC finds</div><div id="hybSem" style="font-size:13px;"></div></div>
+        <div><div style="font-size:12px;color:var(--yellow);font-weight:700;margin-bottom:6px;">KEYWORD finds</div><div id="hybKey" style="font-size:13px;"></div></div>
+      </div>
+      <div class="controls"><button onclick="hybMerge()">Merge → hybrid result ⚡</button></div>
+      <div id="hybOut" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+  <!-- 6 metadata -->
+  <section class="card" id="s6">
+    <h2><span class="num">6</span> Metadata Filtering <span style="font-size:13px;color:var(--pink);font-weight:700">★ where security lives</span></h2>
+    <p class="lead">Constrain retrieval before it happens.</p>
+    <p>Each chunk carries <strong>metadata</strong> — source, date, department, <span class="hl">access level</span>. Filtering by it means "only retrieve docs this user is allowed to see." That permission filter is how RAG stops the model leaking data a user shouldn't get.</p>
+    <div class="demo">
+      <div class="label">Live: run the query as different users</div>
+      <div class="controls" style="margin-top:0;">
+        <div class="seg" id="roleSeg">
+          <button class="on" onclick="setRole('all',this)">Admin</button>
+          <button onclick="setRole('hr',this)">HR</button>
+          <button onclick="setRole('eng',this)">Engineer</button>
+        </div>
+      </div>
+      <div id="metaRows" style="margin-top:14px;"></div>
+    </div>
+    <div class="note f5"><b>The security story:</b> permission-aware metadata filtering (don't retrieve what the user can't see) is the front line of RAG data protection — and a natural policy point for a gateway.</div>
+  </section>
+
+  <!-- 7 retrieval + rerank -->
+  <section class="card" id="s7">
+    <h2><span class="num">7</span> Retrieval & Reranking</h2>
+    <p class="lead">Fetch broad and fast, then re-score for precision.</p>
+    <p>First retrieval is fast but rough. A <strong>reranker</strong> — a second, more accurate model — re-scores the top candidates and reorders them. Classic pattern: <span class="hl">retrieve top-50 fast, rerank to the best 5</span>. Big quality gain for little cost.</p>
+    <div class="demo">
+      <div class="label">Live: retrieve, then rerank</div>
+      <div id="rerankOut"></div>
+      <div class="controls"><button onclick="rerankStep()" id="rerankBtn">Retrieve top candidates →</button><button class="ghost" onclick="rerankReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 8 context injection -->
+  <section class="card" id="s8">
+    <h2><span class="num">8</span> Context Injection</h2>
+    <p class="lead">The "augmented generation" — where retrieval meets the prompt.</p>
+    <p>The top reranked chunks are dropped into the prompt alongside the question, usually with <em>"Answer using only the context below."</em> Then the LLM generates a grounded answer.</p>
+    <div class="demo">
+      <div class="label">Live: assemble the final prompt</div>
+      <pre id="ciPrompt" style="background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;min-height:120px;white-space:pre-wrap;margin:0;"></pre>
+      <div class="controls"><button onclick="ciStep()" id="ciBtn">Inject context →</button><button class="ghost" onclick="ciReset()">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- 9 vector DBs -->
+  <section class="card" id="s9">
+    <h2><span class="num">9</span> Vector Databases</h2>
+    <p class="lead">Where the chunk-vectors live. Click one.</p>
+    <div class="demo">
+      <div class="label">Live: pick by your situation</div>
+      <div id="vdbGrid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+      <div id="vdbDetail" style="margin-top:16px;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:16px;min-height:64px;color:var(--muted);">Click a database above.</div>
+    </div>
+    <div class="note f5"><b>For on-prem / sovereign customers:</b> the self-hosted open-source options (Milvus, Qdrant, Weaviate, pgvector) are the ones that can run in their own datacenter behind your gateway.</div>
+  </section>
+
+  <!-- 10 pipeline -->
+  <section class="card" id="s10" style="background:linear-gradient(135deg,rgba(188,140,255,0.1),rgba(88,166,255,0.08));border:1px solid rgba(188,140,255,0.3);">
+    <h2><span class="num">🎯</span> The Full Pipeline</h2>
+    <p class="lead">Follow one question all the way through.</p>
+    <div class="demo">
+      <div class="label">Live: run the whole RAG flow</div>
+      <div id="pipeFlow" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div class="controls"><button onclick="pipeRun()">Run the pipeline ▶</button><button class="ghost" onclick="pipeReset()">Reset</button></div>
+    </div>
+    <div class="note"><b>Two truths:</b> RAG = open-book exam (right pages, not a smarter model) · and <b>retrieval quality dominates</b> — chunking, hybrid & rerank matter more than the LLM. Most "bad RAG" is bad retrieval. ✅</div>
+  </section>
+
+  <footer>RAG — Interactive Explainer · Companion to <em>Learnings/Retrieval-Augmented Generation (RAG).md</em></footer>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.12});
+document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+function dpr(c,h){const d=devicePixelRatio||1;const w=c.clientWidth;c.width=w*d;c.height=h*d;const x=c.getContext('2d');x.scale(d,d);return{ctx:x,w,h};}
+
+/* 1 big idea */
+function bigIdea(){
+  document.getElementById('noRag').innerHTML='<span style="color:var(--pink)">"I don\'t have access to your company\'s specific policies…"</span><br><span style="font-size:12px;color:var(--muted)">(guesses or refuses — never saw your docs)</span>';
+  document.getElementById('yesRag').innerHTML='<span style="color:var(--green)">"Enterprise customers have a 45-day refund window."</span><br><span style="font-size:12px;color:var(--muted)">(grounded in the retrieved policy doc)</span>';
+}
+
+/* 2 chunking */
+(function(){
+  const sl=document.getElementById('chunkSlider'),out=document.getElementById('chunkOut'),v=document.getElementById('chunkVerdict');
+  const text=['The','BIG-IP','handles','load','balancing','.','Refunds','are','issued','within','45','days','for','enterprise','plans','.'];
+  const cols=['#58a6ff','#bc8cff','#3fb950','#ffa657','#f2cc60','#ff7b9c'];
+  function render(){
+    const size=+sl.value;out.innerHTML='';
+    let ci=0;
+    for(let i=0;i<text.length;i+=size){
+      const grp=text.slice(i,i+size);
+      const span=document.createElement('span');span.className='chunk';
+      const col=cols[ci%cols.length];span.style.background=col+'22';span.style.color=col;span.style.borderColor=col+'55';
+      span.textContent=grp.join(' ');out.appendChild(span);ci++;
+    }
+    if(size===1)v.innerHTML='<span style="color:var(--red)">Too small — each chunk lost its context. "45" with no surrounding meaning is useless.</span>';
+    else if(size>=5)v.innerHTML='<span style="color:var(--red)">Too big — retrieving one chunk drags in unrelated topics (load balancing AND refunds).</span>';
+    else if(size===3)v.innerHTML='<span style="color:var(--green)">Just right — each chunk is one coherent idea. ✓</span>';
+    else v.innerHTML='<span style="color:var(--yellow)">Okay — but tune toward one-idea-per-chunk.</span>';
+  }
+  sl.addEventListener('input',render);render();
+})();
+
+/* 3 vector space */
+const vecChunks=[
+  {t:'invoice terms',x:.2,y:.25,g:'billing'},{t:'payment methods',x:.28,y:.34,g:'billing'},{t:'refund policy',x:.15,y:.36,g:'billing'},
+  {t:'password reset',x:.75,y:.28,g:'security'},{t:'2FA setup',x:.82,y:.36,g:'security'},{t:'access control',x:.7,y:.2,g:'security'},
+  {t:'new hire setup',x:.48,y:.75,g:'onboarding'},{t:'welcome guide',x:.56,y:.68,g:'onboarding'},{t:'first-day checklist',x:.42,y:.66,g:'onboarding'}
+];
+const queryPos={billing:{x:.21,y:.3},security:{x:.77,y:.29},onboarding:{x:.49,y:.7}};
+let vecQuery=null;
+function drawVec(){
+  const c=document.getElementById('vecCanvas');const {ctx,w,h}=dpr(c,300);ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle='rgba(120,140,170,.08)';for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(w*i/8,0);ctx.lineTo(w*i/8,h);ctx.stroke();ctx.beginPath();ctx.moveTo(0,h*i/8);ctx.lineTo(w,h*i/8);ctx.stroke();}
+  let near=[];
+  if(vecQuery){const q=queryPos[vecQuery];near=vecChunks.map(ch=>({ch,d:Math.hypot(ch.x-q.x,ch.y-q.y)})).sort((a,b)=>a.d-b.d).slice(0,3).map(o=>o.ch);}
+  const gc={billing:'#58a6ff',security:'#ff7b9c',onboarding:'#3fb950'};
+  vecChunks.forEach(ch=>{
+    const x=ch.x*w,y=ch.y*h;const isNear=near.includes(ch);
+    ctx.beginPath();ctx.arc(x,y,isNear?8:5,0,Math.PI*2);ctx.fillStyle=gc[ch.g];ctx.globalAlpha=vecQuery&&!isNear?.35:1;ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle=isNear?'#fff':'#c9d4e0';ctx.font=(isNear?'700 12px':'11px')+' sans-serif';ctx.textAlign='center';ctx.fillText(ch.t,x,y-11);
+  });
+  if(vecQuery){const q=queryPos[vecQuery];const qx=q.x*w,qy=q.y*h;
+    near.forEach(ch=>{ctx.beginPath();ctx.moveTo(qx,qy);ctx.lineTo(ch.x*w,ch.y*h);ctx.strokeStyle='rgba(242,204,96,.5)';ctx.lineWidth=1.5;ctx.stroke();});
+    ctx.beginPath();ctx.arc(qx,qy,9,0,Math.PI*2);ctx.fillStyle='#f2cc60';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#f2cc60';ctx.font='700 12px sans-serif';ctx.fillText('query',qx,qy+22);
+  }
+}
+function dropQuery(g){vecQuery=g;drawVec();}
+drawVec();addEventListener('resize',drawVec);
+
+/* 4 semantic vs keyword */
+const skDocs=[
+  {t:'Credential recovery process',match:{keyword:false,semantic:true}},
+  {t:'How to reset your password',match:{keyword:true,semantic:true}},
+  {t:'Forgot login? Restore access here',match:{keyword:false,semantic:true}},
+  {t:'Password complexity requirements',match:{keyword:true,semantic:false}},
+  {t:'Cafeteria menu',match:{keyword:false,semantic:false}}
+];
+function skSearch(mode){
+  const box=document.getElementById('skRows');box.innerHTML='';
+  skDocs.forEach(d=>{
+    const hit=d.match[mode];
+    const row=document.createElement('div');row.className='resrow';
+    row.style.borderColor=hit?(mode==='semantic'?'var(--green)':'var(--yellow)'):'var(--border)';
+    row.style.opacity=hit?'1':'0.4';
+    row.innerHTML=`<span style="flex:1;">${d.t}</span><span style="color:${hit?(mode==='semantic'?'var(--green)':'var(--yellow)'):'var(--muted)'};font-weight:700;">${hit?'✓ match':'—'}</span>`;
+    box.appendChild(row);
+  });
+  const kw=skDocs.filter(d=>d.match.keyword).length,se=skDocs.filter(d=>d.match.semantic).length;
+  document.getElementById('skVerdict').innerHTML=mode==='keyword'
+    ?`<span style="color:var(--yellow)">Keyword found ${kw} — missed "credential recovery" & "restore access" (no shared words).</span>`
+    :`<span style="color:var(--green)">Semantic found ${se} — caught the synonyms keyword search missed. ✓</span>`;
+}
+skSearch('keyword');
+
+/* 5 hybrid */
+function hybMerge(){
+  document.getElementById('hybSem').innerHTML='<div class="chunk" style="background:rgba(88,166,255,.15);color:var(--accent);border-color:#58a6ff55;">"connection times out"</div><div class="chunk" style="background:rgba(88,166,255,.15);color:var(--accent);border-color:#58a6ff55;">"latency troubleshooting"</div>';
+  document.getElementById('hybKey').innerHTML='<div class="chunk" style="background:rgba(242,204,96,.15);color:var(--yellow);border-color:#f2cc6055;">"ERR-4021"</div><div class="chunk" style="background:rgba(242,204,96,.15);color:var(--yellow);border-color:#f2cc6055;">"error 4021 patch"</div>';
+  const out=document.getElementById('hybOut');
+  out.innerHTML='<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px;">HYBRID = merged & deduped</div>'+
+    '<div class="resrow" style="border-color:var(--green)"><span style="flex:1">"ERR-4021 patch fixes the connection timeout"</span><span style="color:var(--green);font-weight:700">top hit ✓</span></div>'+
+    '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Semantic gave the meaning, keyword pinned the exact code — together they surface the real answer.</div>';
+}
+
+/* 6 metadata */
+let role='all';
+const metaDocs=[
+  {t:'Employee handbook',dept:'all'},
+  {t:'Salary bands 2026',dept:'hr'},
+  {t:'Production DB credentials',dept:'eng'},
+  {t:'Company holidays',dept:'all'},
+  {t:'Performance reviews',dept:'hr'}
+];
+function setRole(r,btn){role=r;document.querySelectorAll('#roleSeg button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');renderMeta();}
+function renderMeta(){
+  const box=document.getElementById('metaRows');box.innerHTML='';
+  metaDocs.forEach(d=>{
+    const allowed=d.dept==='all'||d.dept===role||role==='all';
+    const row=document.createElement('div');row.className='resrow';
+    row.style.opacity=allowed?'1':'0.35';row.style.borderColor=allowed?'var(--green)':'var(--red)';
+    row.innerHTML=`<span style="flex:1;">${d.t} <span style="font-size:11px;color:var(--muted)">[${d.dept}]</span></span><span style="color:${allowed?'var(--green)':'var(--red)'};font-weight:700;">${allowed?'✓ retrievable':'🔒 filtered out'}</span>`;
+    box.appendChild(row);
+  });
+}
+renderMeta();
+
+/* 7 rerank */
+let rerankStage=0;
+const rerankDocs=[
+  {t:'Refund policy — enterprise',rough:0.71,fine:0.98},
+  {t:'General refund FAQ',rough:0.82,fine:0.64},
+  {t:'Refund form template',rough:0.78,fine:0.55},
+  {t:'Enterprise contract terms',rough:0.69,fine:0.91},
+  {t:'Refund history report',rough:0.75,fine:0.40}
+];
+function rerankStep(){
+  rerankStage++;const out=document.getElementById('rerankOut');const btn=document.getElementById('rerankBtn');
+  if(rerankStage===1){
+    // rough retrieval order (by rough score)
+    const sorted=[...rerankDocs].sort((a,b)=>b.rough-a.rough);
+    out.innerHTML='<div style="font-size:12px;color:var(--yellow);font-weight:700;margin-bottom:6px;">STEP 1 — fast retrieval (rough scores)</div>'+
+      sorted.map(d=>`<div class="resrow"><span style="flex:1">${d.t}</span><span class="val">${d.rough.toFixed(2)}</span></div>`).join('');
+    btn.textContent='Now rerank →';
+  }else{
+    const sorted=[...rerankDocs].sort((a,b)=>b.fine-a.fine);
+    out.innerHTML='<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px;">STEP 2 — reranked (precise scores) → keep top 3</div>'+
+      sorted.map((d,i)=>`<div class="resrow" style="border-color:${i<3?'var(--green)':'var(--border)'};opacity:${i<3?1:.4}"><span style="flex:1">${d.t}</span><span class="val" style="color:${i<3?'var(--green)':'var(--muted)'}">${d.fine.toFixed(2)}</span></div>`).join('');
+    out.innerHTML+='<div style="font-size:13px;color:var(--muted);margin-top:6px;">The truly-relevant "enterprise" docs jumped to the top — the generic FAQ dropped.</div>';
+    btn.textContent='Done';btn.disabled=true;btn.style.opacity=.5;
+  }
+}
+function rerankReset(){rerankStage=0;document.getElementById('rerankOut').innerHTML='';const b=document.getElementById('rerankBtn');b.textContent='Retrieve top candidates →';b.disabled=false;b.style.opacity=1;}
+
+/* 8 context injection */
+let ciStage=0;
+function ciStep(){
+  ciStage++;const p=document.getElementById('ciPrompt');const b=document.getElementById('ciBtn');
+  if(ciStage===1){p.innerHTML='<span style="color:var(--purple)">System:</span> Answer using ONLY the context below.\n\n<span style="color:var(--muted)">[context goes here…]</span>\n\n<span style="color:var(--accent)">Question:</span> What\'s our enterprise refund window?';b.textContent='Inject retrieved chunks →';}
+  else if(ciStage===2){p.innerHTML='<span style="color:var(--purple)">System:</span> Answer using ONLY the context below.\n\n<span style="color:var(--green)">[1] Enterprise plans: 45-day refund window.\n[2] Refunds processed to original payment method.</span>\n\n<span style="color:var(--accent)">Question:</span> What\'s our enterprise refund window?';b.textContent='Generate answer →';}
+  else{p.innerHTML='<span style="color:var(--purple)">System:</span> Answer using ONLY the context below.\n\n<span style="color:var(--green)">[1] Enterprise plans: 45-day refund window.\n[2] Refunds processed to original payment method.</span>\n\n<span style="color:var(--accent)">Question:</span> What\'s our enterprise refund window?\n\n<span style="color:var(--yellow)">Answer:</span> Enterprise customers have a <b>45-day</b> refund window, processed to the original payment method. ✓';b.textContent='Done';b.disabled=true;b.style.opacity=.5;}
+}
+function ciReset(){ciStage=0;document.getElementById('ciPrompt').textContent='';const b=document.getElementById('ciBtn');b.textContent='Inject context →';b.disabled=false;b.style.opacity=1;}
+ciReset();
+
+/* 9 vector DBs */
+const vdbs=[
+  {n:'pgvector',s:'Postgres extension',d:'Already run Postgres? Add vectors to your existing database — no new system to operate. The simplest starting point.'},
+  {n:'Pinecone',s:'Managed cloud',d:'Fully-managed SaaS. Zero ops, no infrastructure to run — the managed default when you don\'t want to host anything.'},
+  {n:'Milvus',s:'Open-source, massive scale',d:'Built for billions of vectors, self-hosted, performance-critical workloads. Heavyweight but scales.'},
+  {n:'Qdrant',s:'Open-source (Rust)',d:'Fast and ergonomic, with strong metadata filtering. A very popular self-hosted choice.'},
+  {n:'Weaviate',s:'Open-source, batteries-included',d:'Self-hosted with built-in hybrid search and modules. Convenient all-in-one.'}
+];
+(function(){
+  const grid=document.getElementById('vdbGrid');
+  vdbs.forEach(v=>{
+    const b=document.createElement('button');b.className='ghost';b.style.cssText='padding:8px 14px;';
+    b.innerHTML=`${v.n} <span style="color:var(--muted);font-size:11px;">${v.s}</span>`;
+    b.onclick=()=>{document.getElementById('vdbDetail').innerHTML=`<b style="color:var(--accent-2)">${v.n}</b> <span style="color:var(--muted)">· ${v.s}</span><br><span style="color:var(--text)">${v.d}</span>`;};
+    grid.appendChild(b);
+  });
+})();
+
+/* 10 pipeline */
+const pipe=[
+  {t:'Question',c:'#58a6ff',d:'"What\'s our enterprise refund window?"'},
+  {t:'Embed query',c:'#79c0ff',d:'→ vector [0.21, -0.44, …]'},
+  {t:'Metadata filter',c:'#ff7b9c',d:'→ only docs this user may see'},
+  {t:'Hybrid search',c:'#bc8cff',d:'→ semantic + keyword, top-50 candidates'},
+  {t:'Rerank',c:'#f2cc60',d:'→ reorder, keep the best 5'},
+  {t:'Inject context',c:'#ffa657',d:'→ chunks + question into the prompt'},
+  {t:'LLM answers',c:'#3fb950',d:'→ "Enterprise: 45-day refund window." ✓ (grounded)'}
+];
+let pipeI=0,pipeTimer=null;
+function pipeRun(){
+  pipeReset();
+  pipeTimer=setInterval(()=>{
+    if(pipeI>=pipe.length){clearInterval(pipeTimer);return;}
+    const s=pipe[pipeI];const d=document.createElement('div');
+    d.style.cssText=`background:#0d1117;border:1px solid var(--border);border-left:3px solid ${s.c};border-radius:8px;padding:8px 12px;opacity:0;transform:translateX(-8px);transition:.3s;`;
+    d.innerHTML=`<span style="color:${s.c};font-weight:700;font-size:12px;text-transform:uppercase;">${s.t}</span> <span style="font-size:13.5px;">${s.d}</span>`;
+    document.getElementById('pipeFlow').appendChild(d);requestAnimationFrame(()=>{d.style.opacity=1;d.style.transform='none';});
+    pipeI++;
+  },650);
+}
+function pipeReset(){if(pipeTimer)clearInterval(pipeTimer);pipeI=0;document.getElementById('pipeFlow').innerHTML='';}
+</script>
+</body>
+</html>
